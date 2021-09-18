@@ -65,11 +65,10 @@ def get_array_from_database(course_name):
         answer_value = []  # массив с ответами (т.к. может быть несколько столбцов с ответами (васяткино ИЛИ))
         database_question_array = []
         database_answer_array = []
-        for i in range(2,
-                       100000):  # цикл для помещения всех вопросов в массив (ищет максимум в 100000 строк). Введи потом переменную которая считает количесво строк
+        for i in range(2, 100000):  # цикл для помещения всех вопросов в массив (ищет максимум в 100000 строк). Введи потом переменную которая считает количесво строк
             question_value = workbook[sheet].cell(row=i, column=2).value
             x = 3  # переменная для прохода по столбцам в цикле while
-            answer_value=[]  # очищаем массив с ответами чтобы не было дублей в "database_answer_array"
+            answer_value = []  # очищаем массив с ответами чтобы не было дублей в "database_answer_array"
             while workbook[sheet].cell(row=i, column=x).value:
                 answer_value.append(str(workbook[sheet].cell(row=i, column=x).value))
                 x = x+1

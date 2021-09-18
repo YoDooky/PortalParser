@@ -17,16 +17,14 @@ def find_answer_to_click(weblist_array, database_array):
     clear_database_array = clear_symbols(database_array)  # данные (вопросы и ответы) с базы данных
     last_num = 10  # костыль для того чтобы отслеживать сменился ли вопрос в следующем ниже цикле, чтобы не было повторяющихся найденных вопросов в массиве "founded_questions"
 
-    for num, each in enumerate(
-            clear_weblist_array[0][0]):  # перебираем вложенный массив с вопросами в массиве с данными
+    for num, each in enumerate(clear_weblist_array[0][0]):  # перебираем вложенный массив с вопросами в массиве с данными
         next_question = 0  # флаг того что ответ на вопрос дан верный и нужно перейти к следующему (если = 1)
         try:
             correct_answer = []
             answer_list_index = clear_database_array[0].index(each)  # ищем индекс вопроса во вложенном массиве с вопросами в базе данных (по сути является и индексом ответа)
             correct_answer.append(clear_symbols((get_answer(database_array[1][answer_list_index]))))
             founded_database_answer.append((get_answer(database_array[1][answer_list_index])))
-            founded_database_question.append(
-                database_array[0][answer_list_index])  # добавляем в массив с вопросами найденный в базе вопрос
+            founded_database_question.append(database_array[0][answer_list_index])  # добавляем в массив с вопросами найденный в базе вопрос
             for answer_count in range(len(correct_answer[0])):  # перебираем все "или" в базе
                 suggest_answer_link_to_click = []
                 if next_question:
@@ -142,16 +140,16 @@ def logging(database_question, database_answer, weblist_question, weblist_answer
 
 # пытаемся перевести в конкретный текст из базы данных в значение ответа
 def get_answer(answer):
-    answer_array=[]
+    answer_array = []
     answer_list = []
     last_index = -2
     symbol = '*)'
     for every_answer in answer:
-        lengh = len(every_answer)
-        delimeter_index = []  # обнуляем массив с индексами, чтобы не засунуть те же самые элементы из первого елемента массива "answer"
+        length = len(every_answer)
+        delimiter_index = []  # обнуляем массив с индексами, чтобы не засунуть те же самые элементы из первого елемента массива "answer"
         if every_answer.find(symbol) != -1:  # если нашел в строке разделитель
             x = 0
-            while x <= lengh:  # цикл для прохождения по всем символам строки
+            while x <= length:  # цикл для прохождения по всем символам строки
                 index = every_answer.find(symbol, x)
                 if index != -1:  # если нашел порядковый номер первого символа строки содержащего разделитель, то
                     x = index + 1  # начинаем итерацию в следующем цикле с этого символа
@@ -159,14 +157,14 @@ def get_answer(answer):
                     # x += 1
                     break
                 last_index = index
-                delimeter_index.append(index)
+                delimiter_index.append(index)
             for each in range(
-                    len(delimeter_index)):  # цикл для помещения всех символов до разделителя в массив с ответами
-                if each == len(delimeter_index) - 1:  # если последний элемент массива, то добавляем все остальные символы после разделителя до конца строки
-                    answer_list.append(every_answer[delimeter_index[each]: len(every_answer)])
+                    len(delimiter_index)):  # цикл для помещения всех символов до разделителя в массив с ответами
+                if each == len(delimiter_index) - 1:  # если последний элемент массива, то добавляем все остальные символы после разделителя до конца строки
+                    answer_list.append(every_answer[delimiter_index[each]: len(every_answer)])
                     break
                 else:
-                    answer_list.append(every_answer[delimeter_index[each]: delimeter_index[
+                    answer_list.append(every_answer[delimiter_index[each]: delimiter_index[
                         each + 1]])  # добавляем в массив символы между разделителями и до первого разделителя
         else:
             answer_list.append(every_answer)
@@ -205,7 +203,7 @@ def del_specific_symbols(
         string_object):
     if isinstance(string_object, str):
         output_variable = string_object.lower().translate(
-            {ord(c): None for c in '*); '})  # игнорируем спец символы и пробелы
+            {ord(c): None for c in '*); \xa0'})  # игнорируем спец символы и пробелы
     else:
         output_variable = string_object
     return output_variable

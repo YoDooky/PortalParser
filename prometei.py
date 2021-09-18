@@ -122,29 +122,51 @@ def find_course_url(course_path):
     # сделай еще проверку на отрытие окна с подтверждением сдачи и нажатием там кнопки ОК
 
 
+# # парсим текст с вопросом
+# def get_question():
+#     question_mask = '//*[@class="question-text"]'
+#     wait_until_load(question_mask)
+#     question_element = driver.find_elements(By.XPATH, question_mask)
+#     return question_element
+#
+#
+# # загружаем в массив ответы на странице для указанного вопроса
+# def get_answer(question):
+#     answer_mask = "//*[text()[contains(., '" + question + "')]]" + '//ancestor::div[2]//div//table//tbody//tr//td//div'
+#     answer_element = driver.find_elements(By.XPATH, answer_mask)
+#     current_answers_list = []  # список ответов на текущий вопрос
+#     #    wait_until_load(answer_mask)
+#     for each in answer_element:
+#         current_answers_list.append(each.text)
+#     return current_answers_list
 # парсим текст с вопросом
 def get_question():
     question_mask = '//*[@class="question-text"]'
+    question_id_mask = '//*[@class="question-text"]//ancestor::div[3]'
     wait_until_load(question_mask)
     question_element = driver.find_elements(By.XPATH, question_mask)
-    return question_element
+    question_id_element = driver.find_elements(By.XPATH, question_id_mask)
+    question_id_list = []
+    for each in question_id_element:
+        question_id = each.get_attribute('data-quiz-uid')  # находим id вопроса
+        if question_id:  # если результат не нулевой то добавляем в массив с id вопроса
+            question_id_list.append(question_id)
+    return question_element, question_id_list
 
 
 # загружаем в массив ответы на странице для указанного вопроса
-def get_answer(question):
-    answer_mask = "//*[text()[contains(., '" + question + "')]]" + '//ancestor::div[2]//div//table//tbody//tr//td//div'
+def get_answer(question_id):
+    answer_mask = "//*[@data-quiz-uid='" + question_id + "']//div//table//tbody//tr//td//div"
     answer_element = driver.find_elements(By.XPATH, answer_mask)
-    current_answers_list = []  # список ответов на текущий вопрос
-    #    wait_until_load(answer_mask)
-    for each in answer_element:
+    current_answers_list = []
+    for each in answer_element:  # парсим текст из элементов (т.к. find_elements может извлекать только элементы)
         current_answers_list.append(each.text)
     return current_answers_list
 
 
 # ищем ссылки на ответы и кладем в массив (для того чтобы по правильным ответам потом кликнуть)
-def get_answer_link(question):
-    answer_link_mask = "//*[text()[contains(., '" + question + "')]]" \
-                       + '//ancestor::div[2]//div//table//tbody//tr//td//div//span'
+def get_answer_link(question_id):
+    answer_link_mask = "//*[@data-quiz-uid='" + question_id + "']//div//table//tbody//tr//td//div//span"
     answer_link_element = driver.find_elements(By.XPATH, answer_link_mask)
     current_answers_link_list = []  # список ответов на текущий вопрос
     for each in answer_link_element:
@@ -154,7 +176,7 @@ def get_answer_link(question):
 
 # положить все вопросы, ответы, линки в один трехмерный массив
 def get_category_array():
-    question_element = get_question()
+    question_element, question_id_list = get_question()
     category_list = []
     questions_list = []
     all_question_list = []  # массив с одним массивом, чтобы было проще проходиться по элементам в цикле
@@ -162,8 +184,9 @@ def get_category_array():
     all_answer_link_list = []
     for each in question_element:
         questions_list.append(each.text)
-        all_answer_list.append(get_answer(each.text))
-        all_answer_link_list.append(get_answer_link(each.text))
+    for each in question_id_list:
+        all_answer_list.append(get_answer(each))
+        all_answer_link_list.append(get_answer_link(each))
     all_question_list.append(questions_list)
     category_list.append(all_question_list)
     category_list.append(all_answer_list)
@@ -204,7 +227,7 @@ def right_answer_click(course_theme):  # собираем массив с ссы
     else:
         return ""
 
-# функция для отслеивания прокликанных ответов в web
+# функция для отслеживания прокликанных ответов в web
 def find_clicked_answer():
     selector_mask = ['//*[@class="check-control checked"]', '//*[@class="check-control  checked"]']  # маска для нахождения кликнутого check-box
     question_name_mask = './/ancestor::div[3]//*[@class="question-text"]'  # маска для поиска названия вопроса где был кликнут check-box
