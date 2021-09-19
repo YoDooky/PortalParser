@@ -1,13 +1,12 @@
-
 # модуль для обработки данных с базы данных Excel и Web страницы теста с выводом массива элементов для клика
+
+
 def find_answer_to_click(weblist_array, database_array):
     err_message = "В твоей дырявой базе ответов чуть менее чем нихуя. Выбери правильные ответы и заверши тест. " \
                   "После этого для продолжения введи 'y' и нажми Enter. Если хочешь выйти из прожки введи 'x'"
     unidentified_question = []  # массив c ответами, которые не были найдены
-    # correct_answer_list = []  # массив ответов из базы данных, преобразованный с помощью разделителя "*)"
-    suggest_answer_link_to_click=[]
     answer_link_to_click = []
-    founded_questions = []  # массив с вопросами которые были найдены и в базе и в тесте и ответы на эти вопросы были найдены и в базе и в тесте
+    founded_questions_id = []  # массив с вопросами которые были найдены и в базе и в тесте и ответы на эти вопросы были найдены и в базе и в тесте
     founded_weblist_questions = []  # массив с вопросами которые были найдены и в базе и в тесте и ответы на эти вопросы были найдены и в базе и в тесте (вопросы в массиве не повторяются)
     founded_weblist_answers = []  # массив с ответами которые были найдены и в базе и в тесте
     current_answers = []  # массив с ответами на текущий в цикле вопрос. Сделан чтобы каждому элементу массива "founded answers" соответствовали ответы
@@ -39,7 +38,7 @@ def find_answer_to_click(weblist_array, database_array):
                         if each_answer == each_correct_answer:
                             answer_correct += 1
                             suggest_answer_link_to_click.append(clear_weblist_array[2][num][num_answer])
-                            founded_questions.append(weblist_array[0][0][num])
+                            founded_questions_id.append(weblist_array[3][num]) #добавляем ID найденного вопроса
                             if last_num != num:  # если вопрос тот же самый не добавляем его по новой в массив с вопросами для лога
                                 founded_weblist_questions.append(weblist_array[0][0][num])
                             current_answers.append(weblist_array[1][num][num_answer])
@@ -47,8 +46,6 @@ def find_answer_to_click(weblist_array, database_array):
                             if answer_correct == len(correct_answer[0][answer_count]): # если ответ и количество ответов совпало с базой то следующий вопрос
                                 answer_link_to_click.extend(suggest_answer_link_to_click)
                                 next_question = 1
-                    #if answer_correct == len(correct_answer[0][answer_count]):
-                     #   break #  прерываем перебор "или" если все ответы в базе выбраны в web
             # добавляем массив с текущими ответами на вопрос в общий массив со всеми ответами на вопросы
             if current_answers:
                 founded_weblist_answers.append(current_answers)
@@ -57,77 +54,62 @@ def find_answer_to_click(weblist_array, database_array):
         except:
             unidentified_question.append(weblist_array[0][0][num])  # помещаем в массив ответы, которые не были найдены
             continue
-    # логгируем всякую еботню для братка
-    logging(founded_database_question, founded_database_answer, founded_weblist_questions, founded_weblist_answers,
-            unidentified_question,
-            weblist_array)
     if len(unidentified_question) != 0:
-        return answer_link_to_click, "wait", err_message, founded_questions
+        return answer_link_to_click, "wait", err_message, founded_questions_id, founded_database_question, founded_database_answer, unidentified_question
     else:
-        return answer_link_to_click, "", err_message, founded_questions
+        return answer_link_to_click, "", err_message, founded_questions_id, founded_database_question, founded_database_answer, unidentified_question
 
 
 # функция для логирования: 1-вопрос найденный в базе, 2-ответ найденный в базе, 3-вопрос найденный в тесте, 4-ответ найденный в тесте, 5-не найденный в базе ответ
-def logging(database_question, database_answer, weblist_question, weblist_answer, unidentified_question, weblist_data):
+def logging(weblist_array, founded_database_question, founded_database_answer, unidentified_question):
     unmatched_question = []  # вопрос в базе с несовпадающими ответами
     unmatched_answer = []  # несовпадающие ответы на странице и базе
     unidentified_answer = []  # варианты ответов в тесте на ненайденные вопросы в базе
 
-    # -----выводим вопросы которые прога нашла и ответы которые она прокликает-----
-    #try:
-    #    message_number = 0
-    #    print('\n', "----- Вопросы и ответы которые прога клацнет -----")
-    #    for i in range(len(weblist_question)):
-    #        message_number += 1
-    #        print(' ', message_number, '. ', weblist_question[i], sep='', end='\n')
-    #        print(*weblist_answer[i], sep='\n')
-    #except Exception:
-    #   print("Произошел трабл при логгировании вопроса: ", weblist_question[-1])
-
     # -----выводим найденные в базе вопросы и ответы в базе на них-----
     try:
-
         print('\n', "----- Найденные вопросы и ответы в базе -----")
         message_number = 0
-        for i in range(len(database_question)):
+        for i in range(len(founded_database_question)):
             message_number += 1
-            print(' ', message_number, '. ', database_question[i], sep='', end='\n')
-            for z in range(len(database_answer[i])):
-                print(*database_answer[i][z], sep='\n')
+            print(' ', message_number, '. ', founded_database_question[i], sep='', end='\n')
+            for z in range(len(founded_database_answer[i])):
+                print(*founded_database_answer[i][z], sep='\n')
     except Exception:
-        print("Произошел трабл при логгировании вопроса: ", database_question[-1])
+        print("Произошел трабл при логгировании вопроса: ", founded_database_question[-1])
 
     # -----выводим совпадающие с базой вопросы, но не совпадающие с базой ответы на эти вопросы-----
     # находим вопрос с несовпадающими ответами
-    try:
-        for each_database in database_question:
-            answer_found = 0
-            for each_weblist in weblist_question:
-                if each_database == each_weblist:
-                    answer_found = 1
-            if answer_found == 0:
-                unmatched_question.append(each_database)
-        # находим ответы на странице с тестом на этот несовпадающий вопрос
-        for num_weblist_data, each_weblist_data in enumerate(weblist_data[0][0]):
-            for each_unmatched in unmatched_question:
-                if each_unmatched == each_weblist_data:
-                    unmatched_answer.append(weblist_data[1][num_weblist_data])
-        message_number = 0
-        print('\n', "----- Вопросы, найденые в базе, но не совпали ответы с тестом -----")
-        for i in range(len(unmatched_question)):
-            message_number += 1
-            print(' ', message_number, '. ', unmatched_question[i], sep='', end='\n')
-            print(*unmatched_answer[i], sep='\n')
-    except Exception:
-        print("Произошел трабл при логгировании вопроса: ", unmatched_question[-1])
+    # try:
+    #     for each_database, num_database in enumerate(database_question):
+    #         answer_found = 0
+    #         for each_weblist, num_weblist in enumerate(weblist_data[0][0]):
+    #             if each_database == each_weblist:
+    #                 for each_database_answer in database_answer
+    #                 answer_found = 1
+    #         if answer_found == 0:
+    #             unmatched_question.append(each_database)
+    #     # находим ответы на странице с тестом на этот несовпадающий вопрос
+    #     for num_weblist_data, each_weblist_data in enumerate(weblist_data[0][0]):
+    #         for each_unmatched in unmatched_question:
+    #             if each_unmatched == each_weblist_data:
+    #                 unmatched_answer.append(weblist_data[1][num_weblist_data])
+    #     message_number = 0
+    #     print('\n', "----- Вопросы, найденые в базе, но не совпали ответы с тестом -----")
+    #     for i in range(len(unmatched_question)):
+    #         message_number += 1
+    #         print(' ', message_number, '. ', unmatched_question[i], sep='', end='\n')
+    #         print(*unmatched_answer[i], sep='\n')
+    # except Exception:
+    #     print("Произошел трабл при логгировании вопроса: ", unmatched_question[-1])
 
     # -----выводим не найденные вопросы в базе и варианты ответов на них в тесте-----
     # находим ненайденные вопросы
     try:
-        for num_weblist_data, each_weblist_data in enumerate(weblist_data[0][0]):
+        for num_weblist_array, each_weblist_array in enumerate(weblist_array[0][0]):
             for each_unidentified in unidentified_question:
-                if each_unidentified == each_weblist_data:
-                    unidentified_answer.append(weblist_data[1][num_weblist_data])
+                if each_unidentified == each_weblist_array:
+                    unidentified_answer.append(weblist_array[1][num_weblist_array])
         message_number = 0
         print('\n', "----- Вопросы не найденные в базе и варианты ответов на эти вопросы -----")
         for i in range(len(unidentified_question)):
@@ -137,6 +119,44 @@ def logging(database_question, database_answer, weblist_question, weblist_answer
     except Exception:
         print("Произошел трабл при логгировании вопроса: ", unidentified_question[-1])
 
+    # -----выводим вопросы которые прога выбрала и какие не выбрала-----
+    try:
+        clicked_question = []
+        unclicked_question = []
+        all_clicked_answer = []
+        unclicked_answer = []
+        for num_question, each_question in enumerate(weblist_array[0][0]):
+            clicked_answer = []
+            last_each_question = ''
+            unclicked_counter = 0  # счетчик количества некликнутых вопросов
+            for num_answer, each_answer in enumerate(weblist_array[1][num_question]):
+                if weblist_array[4][num_question][num_answer] == 1:  # 5й вложенный список в weblist_array это состояние чекбоксов (1-активен, 0-неактивен)
+                    clicked_answer.append(each_answer)
+                    if each_question != last_each_question:
+                        clicked_question.append(each_question)
+                        last_each_question = each_question
+                else:
+                    unclicked_counter += 1
+                if unclicked_counter == len(weblist_array[1][num_question]):  # если кол-во некликнутых = количеству ответов, то фиксируем вопрос как не кликнутый
+                    unclicked_question.append(each_question)
+                    unclicked_answer.append(weblist_array[1][num_question])
+            if clicked_answer:
+                all_clicked_answer.append(clicked_answer)
+        message_number = 0
+        print('\n', "----- Вопросы и ответы, которые прога выбрала -----")
+        for i in range(len(clicked_question)):
+            message_number += 1
+            print(' ', message_number, '. ', clicked_question[i], sep='', end='\n')
+            print(*all_clicked_answer[i], sep='\n')
+
+        message_number = 0
+        print('\n', "----- Вопросы и ответы, которые прога НЕ выбрала -----")
+        for i in range(len(unclicked_question)):
+            message_number += 1
+            print(' ', message_number, '. ', unclicked_question[i], sep='', end='\n')
+            print(*unclicked_answer[i], sep='\n')
+    except Exception:
+        print("Проблема при логгировании кликнутого/некликнутого вопроса")
 
 # пытаемся перевести в конкретный текст из базы данных в значение ответа
 def get_answer(answer):
