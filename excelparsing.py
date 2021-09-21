@@ -1,6 +1,6 @@
 # модуль для поиска данных в базе данных Excel и добавления их в массив
 from openpyxl import load_workbook
-from processing import clear_symbols
+from test_solving import clear_symbols
 
 files_path = "C:/Prometei/"  # путь к папке со всеми файлами (драйвер хрома, база данных и т.п.)
 workbook = load_workbook(filename=files_path + "SDO.xlsx")

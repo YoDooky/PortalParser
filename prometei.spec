@@ -5,7 +5,7 @@ block_cipher = None
 
 
 a = Analysis(['prometei.py'],
-             pathex=['C:\\Users\\Admin\\PycharmProjects\\pythonProject'],
+             pathex=['C:\\PyProject\\HiProf'],
              binaries=[('C:\\Prometei\\chromedriver.exe', '.')],
              datas=[],
              hiddenimports=[],
