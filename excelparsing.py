@@ -54,9 +54,9 @@ def all_theme_list():
 
 
 # функция для создания листа со всеми вопросами если не нашел лист по названию темы
-def get_array_from_database(course_name):
+def get_array_from_database():
     try:
-        sheet = "ВСЕ ОТВЕТЫ ВСЕЛЕННОЙ"  # find_course_sheet(course_name)
+        sheet = "ВСЕ ОТВЕТЫ ВСЕЛЕННОЙ"  # find_course_sheet()
     except Exception:
         print('Что-то пошло не так при поиске темы в функции "find_course_sheet"')
         return

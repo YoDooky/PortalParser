@@ -15,7 +15,7 @@ def get_logs(weblist_array, founded_database_question, founded_database_answer, 
             for z in range(len(founded_database_answer[i])):
                 print(*founded_database_answer[i][z], sep='\n')
     except Exception:
-        print("Произошел трабл при логгировании вопроса: ", founded_database_question[-1])
+        print("[INFO] Произошел трабл при логгировании вопроса: ", founded_database_question[-1])
 
     # -----выводим совпадающие с базой вопросы, но не совпадающие с базой ответы на эти вопросы-----
     # находим вопрос с несовпадающими ответами
@@ -56,7 +56,7 @@ def get_logs(weblist_array, founded_database_question, founded_database_answer, 
             print(' ', message_number, '. ', unidentified_question[i], sep='', end='\n')
             print(*unidentified_answer[i], sep='\n')
     except Exception:
-        print("Произошел трабл при логгировании вопроса: ", unidentified_question[-1])
+        print("[INFO] Произошел трабл при логгировании вопроса: ", unidentified_question[-1])
 
     # -----выводим вопросы которые прога выбрала и какие не выбрала-----
     try:
@@ -97,4 +97,4 @@ def get_logs(weblist_array, founded_database_question, founded_database_answer, 
             print(' ', message_number, '. ', unclicked_question[i], sep='', end='\n')
             print(*unclicked_answer[i], sep='\n')
     except Exception:
-        print("Проблема при логгировании кликнутого/некликнутого вопроса")
+        print("[INFO] Проблема при логгировании кликнутого/некликнутого вопроса")
