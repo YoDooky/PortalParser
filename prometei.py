@@ -81,25 +81,31 @@ def find_courses():
     try:
         courses_list = driver.find_elements(By.XPATH, courses_list_mask)
         courses_path = driver.find_elements(By.XPATH, courses_path_mask)
+        amount_of_course = len(courses_path)
         if not courses_list:
             print('[INFO] Назначенных курсов нет')
             return
         for each_list in courses_list:
             courses_list_text.append(each_list.text)
             #print(each_course.text)
-
-        return courses_path, courses_list_text
+        for each_path in range(amount_of_course):
+            driver.find_elements(By.XPATH, courses_path_mask)[each_path].click()
+            time.sleep(2)  #гавно
+            courses_url.append(driver.current_url)
+            driver.get(_find_courses_link)  # Поиск курсов для сдачи
+            time.sleep(2)  # гавно
+        return courses_url, courses_list_text
     except Exception:
         print('[INFO] Не удалось найти назначенные курсы и перейти к ним')
     print('_________________________________________________________________________________________')
 
 
 # ищем URL страницы с самими вопросами
-def find_course_url(course_path):
+def find_course_url(course_url):
     run_test_button_mask = ['//*[@class="button launchaction mira-button-primary mira-button"]',
     '//*[@class="mira-horizontal-layout-wrapper clearfix"]//*[@class="button mira-button-primary mira-button"]']  #
     # маска для кнопок запуск не ПРВТ и ПРВТ теста соответственно
-    course_path.click()  # Переход на страницу с выбранным тестом
+    driver.get(course_url)  # Переход на страницу с выбранным тестом
     #course_url = driver.current_url()
     try:
         for each_button in run_test_button_mask:
@@ -322,28 +328,29 @@ def start_script():
     login()
     auth()
     driver.get(_find_courses_link)  # Поиск курсов для сдачи
-    courses_path, courses_list = find_courses()  # Найти курсы
+    courses_url, courses_list_text = find_courses()  # Найти курсы
     print('---Всего назначенных курсов---')
-    print(*courses_list, sep='\n')
+    print(*courses_list_text, sep='\n')
     course_number = 0  # Номер курса
-    for course_counter in range(len(courses_path)):
-        if find_course_url(courses_path[course_counter]):  # передаем путь до конкретного теста. Если не находит кнопки
+    for course_counter in range(len(courses_url)):
+        if find_course_url(courses_url[course_counter]):  # передаем путь до конкретного теста. Если не находит кнопки
             # "Запустить тест" то переходит на следующую итерацию
             driver.switch_to.window(driver.window_handles[0])
             driver.get(_find_courses_link)  # Поиск курсов для сдачи
-            courses_path, courses_list = find_courses()  # Найти курсы
+            #courses_url, courses_list_text = find_courses()  # Найти курсы
             continue
         try:
-            end_test_click(courses_list[course_number])
+            end_test_click(courses_list_text[course_number])
             course_number += 1
         except StaleElementReferenceException:
             print("Не везде кликнул лох")
         try:
-            driver.switch_to.window(driver.window_handles[0])
+            #driver.switch_to.window(driver.window_handles[0])
+            time.sleep(2)  # гавно
             driver.get(_find_courses_link)  # Поиск курсов для сдачи
-            courses_path, courses_list = find_courses()  # Найти курсы
+            #courses_url, courses_list_text = find_courses()  # Найти курсы
         except NoSuchWindowException:
-            driver.get(_find_courses_link)
+            print('[INFO] Не удалось перейти на страницу со всеми тестами')
             continue
     sys.exit()
 
