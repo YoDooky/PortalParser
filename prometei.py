@@ -15,8 +15,8 @@ from selenium.common.exceptions import StaleElementReferenceException
 from selenium.common.exceptions import TimeoutException
 from selenium.common.exceptions import NoSuchWindowException
 from selenium.common.exceptions import NoSuchElementException
-username = "Mikhailov_DA"#"79833207865"  # Имя юзера (впоследствии получаемое через бота)
-password = "Bb-pGE58"#"0Jh#8GPT"  # Пароль юзера (впоследствии получаемый через бота)
+username = "79833207865"#"Mikhailov_DA"  # Имя юзера (впоследствии получаемое через бота)
+password = "0Jh#8GPT"#"Bb-pGE58"  # Пароль юзера (впоследствии получаемый через бота)
 d = DesiredCapabilities.CHROME
 d['goog:loggingPrefs'] = {'performance': 'ALL'}
 files_path = "C:/Prometei/"  # путь к папке со всеми файлами (драйвер хрома, база данных и т.п.)
@@ -25,10 +25,10 @@ options.add_argument('--log-level=3')
 driver = webdriver.Chrome(
     files_path + "chromedriver.exe", options=options)  # Это нужно чтобы можно было выгружать логи с браузера (первоначально для Promitei)
 
-#_find_courses_link = "https://hiprof.irkutskoil.ru/mira/#&step=6&measureStageStatus=NOT_FINISHED&s=Q3dQ3j2436tctmcfnJys&doaction=MyMeasureStatisticsAllPeriodNotFinished&id=&type=mymeasurestatisticslist&measurePeriod=ALL_PERIOD"
-_find_courses_link = 'https://hiprof.irkutskoil.ru/mira/#&stype=sb&sb=1&step=8&id=0&type=mymeasurestatisticslist&' \
-                     'name=%D0%A1%D1%82%D0%B0%D1%82%D0%B8%D1%81%D1%82%D0%B8%D0%BA%D0%B0+%D0%BC%D0%BE%D0%B5%D0%B3%D0%BE' \
-                     '+%D0%BE%D0%B1%D1%83%D1%87%D0%B5%D0%BD%D0%B8%D1%8F' # тестовая ссыль
+_find_courses_link = "https://hiprof.irkutskoil.ru/mira/#&step=6&measureStageStatus=NOT_FINISHED&s=Q3dQ3j2436tctmcfnJys&doaction=MyMeasureStatisticsAllPeriodNotFinished&id=&type=mymeasurestatisticslist&measurePeriod=ALL_PERIOD"
+# _find_courses_link = 'https://hiprof.irkutskoil.ru/mira/#&stype=sb&sb=1&step=8&id=0&type=mymeasurestatisticslist&' \
+#                       'name=%D0%A1%D1%82%D0%B0%D1%82%D0%B8%D1%81%D1%82%D0%B8%D0%BA%D0%B0+%D0%BC%D0%BE%D0%B5%D0%B3%D0%BE' \
+#                       '+%D0%BE%D0%B1%D1%83%D1%87%D0%B5%D0%BD%D0%B8%D1%8F' # тестовая ссыль
 _auth_link = "https://hiprof.irkutskoil.ru/mira/Do?doaction=Go&s=YwSqVdexvj7jQdJp9sEs&id=0&type=customloginpage"
 driver.maximize_window()
 
@@ -36,8 +36,8 @@ driver.maximize_window()
 def login():
     global username
     global password
-    username = username# input('Введи имя работяги: ')
-    password = password# input('Введи пароль работяги: ')
+    username = input('Введи имя работяги: ')#username
+    password = input('Введи пароль работяги: ')#password
 
 
 # ищем поля для ввода логина и пароля и логинимся
@@ -74,7 +74,7 @@ def find_courses():
     courses_list_text = []
     courses_url = []
     try:
-        wait_until_load(courses_list_mask)  # Ждём пока загрузятся курсы
+        wait_element_load(courses_list_mask)  # Ждём пока загрузятся курсы
     except TimeoutException:
         print('[INFO] На странице незаврешенные курсы не найдены')
         sys.exit(0)
@@ -87,47 +87,43 @@ def find_courses():
             return
         for each_list in courses_list:
             courses_list_text.append(each_list.text)
-            #print(each_course.text)
         for each_path in range(amount_of_course):
             driver.find_elements(By.XPATH, courses_path_mask)[each_path].click()
-            time.sleep(2)  #гавно
+            driver.implicitly_wait(10)  # ждем пока загрузится новая страница
             courses_url.append(driver.current_url)
             driver.get(_find_courses_link)  # Поиск курсов для сдачи
-            time.sleep(2)  # гавно
+            driver.implicitly_wait(10)  # ждем пока загрузится новая страница
         return courses_url, courses_list_text
     except Exception:
         print('[INFO] Не удалось найти назначенные курсы и перейти к ним')
     print('_________________________________________________________________________________________')
 
 
-# ищем URL страницы с самими вопросами
-def find_test_page(course_url,course_name):
+# запускаем окно с тестом, если это возможно
+def find_test_page(course_url, course_name):
     # run_test_button_mask = ['//*[@class="tree-node tree-node-type-testcontentsection"]//ancestor::td[1]//ancestor::tr[1]//*[@class="button launchaction mira-button-primary mira-button"]',
     # '//*[@class="mira-horizontal-layout-wrapper clearfix"]//*[@class="button mira-button-primary mira-button"]']  #
     run_test_button_mask = ['//*[@class="button launchaction mira-button-primary mira-button"]',
         '//*[@class="mira-horizontal-layout-wrapper clearfix"]//*[@class="button mira-button-primary mira-button"]']  #
     # маска для кнопок запуск не ПРВТ и ПРВТ теста соответственно (также кнопки для прочтения теории)
     driver.switch_to.window(driver.window_handles[0])
-    time.sleep(2)  # говно
     driver.get(course_url)  # Переход на страницу с выбранным тестом
-    time.sleep(2)  # говно
+    driver.get(course_url)  # Сука тупорылый сайт не переходит по url с первого раза
     no_test_button_counter = 0  # Счетчик не найденных кнопок с запуском теста
-    #course_url = driver.current_url()
     try:
         for each_button in run_test_button_mask:
             try:
-                if wait_until_load(each_button):
+                if wait_element_load(each_button):
                     run_all_elements = driver.find_elements(By.XPATH, each_button)  # Ищем кнопки с запуском теста
                     for each_element in range(0, len(run_all_elements)-1):  # кликаем по всем, кроме запуска теста
-                        time.sleep(2)  # говно
                         run_all_elements[each_element].click()
+                    WebDriverWait(driver, 10).until(EC.number_of_windows_to_be(len(run_all_elements)))  # ждем пока
+                    # откроются все окна с теорией
                     while len(driver.window_handles) > 1:  # закрываем все открытые окна, кроме основного
-                        time.sleep(2)  # говно
                         driver.switch_to.window(driver.window_handles[1])
                         driver.close()
-                    time.sleep(2)  # говно
                     driver.switch_to.window(driver.window_handles[0])
-                    wait_until_load(each_button)
+                    wait_element_load(each_button)
                     driver.find_elements(By.XPATH, each_button)[-1].click()
                     break
                 else:
@@ -138,16 +134,13 @@ def find_test_page(course_url,course_name):
             except TimeoutException:
                 continue
     except Exception:
-        print('[INFO] произошла ошибка при переходе на страницу с тестом')
+        print('[INFO] <{0}> Произошла ошибка при переходе на страницу с тестом'.format(course_name))
         return 0
-    time.sleep(2)  # говно
+    WebDriverWait(driver, 10).until(EC.number_of_windows_to_be(2))  # ждем появления окна с тестом и главного окна
     driver.switch_to.window(driver.window_handles[1])
-    if wait_until_load('//*[@id="btnOk"]', 10):  # проверяем вылезло ли окно с подтверждением начать тест и соглашаемся
+    if wait_element_load('//*[@id="btnOk"]', 10):  # проверяем вылезло ли окно с подтверждением начать тест и соглашаемся
         driver.find_element(By.XPATH, '//*[@id="btnOk"]').click()
-        time.sleep(2)  # говно
-    #driver.switch_to.frame(driver.find_element(By.XPATH, '//*[@id="Content"]'))  # Пидорги засунули
-    # весь контент в айфрейм, поэтому переключаемся на него сделай еще проверку на отрытие окна с
-    # подтверждением сдачи и нажатием там кнопки ОК
+        #time.sleep(2)  # говно
     return 1
 
 
@@ -155,7 +148,7 @@ def find_test_page(course_url,course_name):
 def get_question():
     question_mask = '//*[@class="question-text"]'
     question_id_mask = '//*[@class="question-text"]//ancestor::div[3]'
-    wait_until_load(question_mask)
+    wait_element_load(question_mask)
     question_element = driver.find_elements(By.XPATH, question_mask)
     question_id_element = driver.find_elements(By.XPATH, question_id_mask)
     question_id_list = []
@@ -233,25 +226,27 @@ def right_answer_click():  # собираем массив с ссылками �
     driver.maximize_window()
     for num, each in enumerate(answer_link_click):
         try:
-            wait_until_load('//*//div//table//tbody//tr//td//div//span')
-            time.sleep(1)
+            wait_element_load('//*//div//table//tbody//tr//td//div//span')
             founded_questions_mask = "//*[@data-quiz-uid='" + founded_questions_id[num] + "']"
             question_select = driver.find_element(By.XPATH, founded_questions_mask)
             driver.execute_script("arguments[0].scrollIntoView();", question_select)  # прокрутка
             # тобы можно было кликнуть
-            time.sleep(1)
+            WebDriverWait(driver, 10).until(EC.visibility_of(each))  # ждем чтобы элемент был виден и кликаем по нему
             each.click()
         except:
             print('[INFO] Произошла проблема при прокликивании вариантов ответа')
     # логгируем всякую еботню для братка
     weblist_array = get_weblist_array()  # обновляем данные с сайта (в частности для проверки checkbox)
     prog_logging.get_logs(weblist_array, founded_database_question, founded_database_answer, unidentified_question)
+    # считаем кол-во не отвеченных вопросов
     wrong_answer_list = []
-    for each_question in weblist_array[4]:
+    for num_question, each_question in enumerate(weblist_array[4]):
         if not sum(each_question):
-            wrong_answer_list.append(each_question.index(each_question) + 1)
+            wrong_answer_list.append(num_question + 1)
     print("\nОстались не отвечеными {0} вопросов из {1}. Это вопросы №{2}".format(
         len(wrong_answer_list), len(weblist_array[4]), wrong_answer_list))
+    if wrong_answer_list:  #если есть не кликнутые ответы то ждем указаний юзера
+        wait_for_user('[ALARM] OMG!!!Прога кликнула не все варианты! Выбери ответ и нажми Enter чтобы продолжить, "x" для выхода')
     random_delay_timer(len(weblist_array[0][0]))
     # if wait_user != "":
     #     return err_message
@@ -276,7 +271,8 @@ def end_test_click(course_name):
     button_element = driver.find_element(By.XPATH, answer_button_mask)
     try:
         section_text = str(driver.find_element(By.XPATH, section_mask).text)
-        section_amount = int(section_text.partition('из')[2].strip())  # выясням количество разделов по фильтру
+        section_amount = int(section_text.partition('из')[2].strip()) #- int(section_text.partition('раздел')[0].strip())  #
+        # выясняме количество  оставшихся разделов по фильтру
         for each in range(section_amount):
             driver.switch_to.window(driver.window_handles[1])
             driver.switch_to.frame(driver.find_element(By.XPATH, '//*[@id="Content"]'))
@@ -292,31 +288,35 @@ def end_test_click(course_name):
         wait_for_user(
             '*** Доверяешь ли ты проге мешок с костями? Нажми Enter чтобы продолжить, "x" для выхода ***')
         button_element.click()
-    wait_until_load('//*[contains(.,"Тестирование завершено")]')
+    wait_element_load('//*[contains(.,"Тестирование завершено")]')
     driver.find_element(By.XPATH, endtest_button_mask).click()
     driver.close()
     print('[INFO] <{0}> Назначенный тест сдан'.format(course_name))
 
 
 # задержка для того чтобы загрузились скрипты, ajax и прочее гавно
-def wait_until_load(_courses_list_filter, timeout=30):
+def wait_element_load(_courses_list_filter, timeout=10):
     try:
         WebDriverWait(driver, timeout).until(EC.presence_of_element_located((By.XPATH, _courses_list_filter)))
-        time.sleep(1)
+        #WebDriverWait(driver, timeout).until(EC.element_located_selection_state_to_be((By.XPATH, _courses_list_filter)))
         return 1
     except TimeoutException:
         return 0
 
 
+def wait_window_load():
+    pass
+
+
 # рандомная задержка с отображением оставшегося времени
 def random_delay_timer(timer_multiply=1):
-    delay = random.randint(0, 0) * timer_multiply
+    delay = random.randint(59, 119) * timer_multiply
     for remaining in range(delay, 0, -1):
         sys.stdout.write("\r")
         sys.stdout.write("{:2d} секунд осталось из {:2d} секунд.".format(remaining, delay))
         sys.stdout.flush()
         time.sleep(1)
-    sys.stdout.write("\rТаймер кончил!            \n")
+    sys.stdout.write("\rТаймер кончил за {:2d} секунд!            \n".format(delay))
 
 
 # ожидание ввода пользователя
@@ -354,27 +354,15 @@ def start_script():
     print(*courses_list_text, sep='\n')
     course_number = 0  # Номер курса
     for each_url in courses_url:
-        if find_test_page(each_url, courses_list_text[course_number+1]):  # передаем путь до конкретного теста. Если не находит кнопки
-            # "Запустить тест" то переходит на следующую итерацию
-            #driver.switch_to.window(driver.window_handles[0])
-            #driver.get(_find_courses_link)  # Поиск курсов для сдачи
-            #courses_url, courses_list_text = find_courses()  # Найти курсы
-            #continue
+        if find_test_page(each_url, courses_list_text[course_number]):  # передаем путь до конкретного теста. Если не
+            # находит кнопки запуска теста то переходит к следующему
             try:
                 end_test_click(courses_list_text[course_number])
-                course_number += 1
             except StaleElementReferenceException:
                 print("Не везде кликнул лох")
             except NoSuchWindowException:
                 print('[INFO] Не удалось перейти на страницу со всеми тестами')
-
-        # try:
-        #     #driver.switch_to.window(driver.window_handles[0])
-        #     time.sleep(2)  # гавно
-        #     driver.switch_to.window(driver.window_handles[0])
-        #     driver.get(_find_courses_link)  # Поиск курсов для сдачи
-        #     #courses_url, courses_list_text = find_courses()  # Найти курсы
-
+        course_number += 1
     sys.exit()
 
 
