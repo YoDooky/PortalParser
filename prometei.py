@@ -8,7 +8,7 @@ import prog_logging
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
-from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.support import expected_conditions as ec
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.chrome.options import Options
 from selenium.common.exceptions import UnexpectedAlertPresentException
@@ -16,20 +16,24 @@ from selenium.common.exceptions import StaleElementReferenceException
 from selenium.common.exceptions import TimeoutException
 from selenium.common.exceptions import NoSuchWindowException
 from selenium.common.exceptions import NoSuchElementException
-username = "79833207865"#"Mikhailov_DA"  # Имя юзера (впоследствии получаемое через бота)
-password = "0Jh#8GPT"#"Bb-pGE58"  # Пароль юзера (впоследствии получаемый через бота)
+
+username = "79833207865"  # "Mikhailov_DA"  # Имя юзера (впоследствии получаемое через бота)
+password = "0Jh#8GPT"  # "Bb-pGE58"  # Пароль юзера (впоследствии получаемый через бота)
 d = DesiredCapabilities.CHROME
 d['goog:loggingPrefs'] = {'performance': 'ALL'}
 files_path = "C:/Prometei/"  # путь к папке со всеми файлами (драйвер хрома, база данных и т.п.)
 options = Options()
 options.add_argument('--log-level=3')
 driver = webdriver.Chrome(
-    files_path + "chromedriver.exe", options=options)  # Это нужно чтобы можно было выгружать логи с браузера (первоначально для Promitei)
+    files_path + "chromedriver.exe", options=options)  # Это нужно чтобы можно было выгружать логи с браузера
+# (первоначально для Promitei)
 
-_find_courses_link = "https://hiprof.irkutskoil.ru/mira/#&step=6&measureStageStatus=NOT_FINISHED&s=Q3dQ3j2436tctmcfnJys&doaction=MyMeasureStatisticsAllPeriodNotFinished&id=&type=mymeasurestatisticslist&measurePeriod=ALL_PERIOD"
-# _find_courses_link = 'https://hiprof.irkutskoil.ru/mira/#&stype=sb&sb=1&step=8&id=0&type=mymeasurestatisticslist&' \
-#                       'name=%D0%A1%D1%82%D0%B0%D1%82%D0%B8%D1%81%D1%82%D0%B8%D0%BA%D0%B0+%D0%BC%D0%BE%D0%B5%D0%B3%D0%BE' \
-#                       '+%D0%BE%D0%B1%D1%83%D1%87%D0%B5%D0%BD%D0%B8%D1%8F' # тестовая ссыль
+# _find_courses_link = "https://hiprof.irkutskoil.ru/mira/#&step=6&measureStageStatus=NOT_FINISHED&s=" \
+#                      "Q3dQ3j2436tctmcfnJys&doaction=MyMeasureStatisticsAllPeriodNotFinished&id=&type=" \
+#                      "mymeasurestatisticslist&measurePeriod=ALL_PERIOD"
+_find_courses_link = 'https://hiprof.irkutskoil.ru/mira/#&stype=sb&sb=1&step=8&id=0&type=mymeasurestatisticslist&' \
+                       'name=%D0%A1%D1%82%D0%B0%D1%82%D0%B8%D1%81%D1%82%D0%B8%D0%BA%D0%B0+' \
+                     '%D0%BC%D0%BE%D0%B5%D0%B3%D0%BE+%D0%BE%D0%B1%D1%83%D1%87%D0%B5%D0%BD%D0%B8%D1%8F'  # тестовая ссы
 _auth_link = "https://hiprof.irkutskoil.ru/mira/Do?doaction=Go&s=YwSqVdexvj7jQdJp9sEs&id=0&type=customloginpage"
 driver.maximize_window()
 
@@ -37,8 +41,8 @@ driver.maximize_window()
 def login():
     global username
     global password
-    username = input('Введи имя работяги: ')#username
-    password = input('Введи пароль работяги: ')#password
+    username = input('Введи имя работяги: ')  # username
+    password = input('Введи пароль работяги: ')  # password
 
 
 # ищем поля для ввода логина и пароля и логинимся
@@ -102,10 +106,12 @@ def find_courses():
 
 # запускаем окно с тестом, если это возможно
 def find_test_page(course_url, course_name):
-    # run_test_button_mask = ['//*[@class="tree-node tree-node-type-testcontentsection"]//ancestor::td[1]//ancestor::tr[1]//*[@class="button launchaction mira-button-primary mira-button"]',
+    # run_test_button_mask = ['//*[@class="tree-node tree-node-type-testcontentsection"]//ancestor::td[1]//ancestor
+    # ::tr[1]//*[@class="button launchaction mira-button-primary mira-button"]',
     # '//*[@class="mira-horizontal-layout-wrapper clearfix"]//*[@class="button mira-button-primary mira-button"]']  #
     run_test_button_mask = ['//*[@class="button launchaction mira-button-primary mira-button"]',
-        '//*[@class="mira-horizontal-layout-wrapper clearfix"]//*[@class="button mira-button-primary mira-button"]']  #
+                            '//*[@class="mira-horizontal-layout-wrapper clearfix"]//*'
+                            '[@class="button mira-button-primary mira-button"]']  #
     # маска для кнопок запуск не ПРВТ и ПРВТ теста соответственно (также кнопки для прочтения теории)
     driver.switch_to.window(driver.window_handles[0])
     driver.get(course_url)  # Переход на страницу с выбранным тестом
@@ -116,9 +122,9 @@ def find_test_page(course_url, course_name):
             try:
                 if wait_element_load(each_button):
                     run_all_elements = driver.find_elements(By.XPATH, each_button)  # Ищем кнопки с запуском теста
-                    for each_element in range(0, len(run_all_elements)-1):  # кликаем по всем, кроме запуска теста
+                    for each_element in range(0, len(run_all_elements) - 1):  # кликаем по всем, кроме запуска теста
                         run_all_elements[each_element].click()
-                    WebDriverWait(driver, 10).until(EC.number_of_windows_to_be(len(run_all_elements)))  # ждем пока
+                    WebDriverWait(driver, 10).until(ec.number_of_windows_to_be(len(run_all_elements)))  # ждем пока
                     # откроются все окна с теорией
                     while len(driver.window_handles) > 1:  # закрываем все открытые окна, кроме основного
                         driver.switch_to.window(driver.window_handles[1])
@@ -137,11 +143,10 @@ def find_test_page(course_url, course_name):
     except Exception:
         print('[INFO] <{0}> Произошла ошибка при переходе на страницу с тестом'.format(course_name))
         return 0
-    WebDriverWait(driver, 10).until(EC.number_of_windows_to_be(2))  # ждем появления окна с тестом и главного окна
+    WebDriverWait(driver, 10).until(ec.number_of_windows_to_be(2))  # ждем появления окна с тестом и главного окна
     driver.switch_to.window(driver.window_handles[1])
-    if wait_element_load('//*[@id="btnOk"]', 10):  # проверяем вылезло ли окно с подтверждением начать тест и соглашаемся
+    if wait_element_load('//*[@id="btnOk"]', 10):  # проверяем вылезло ли окно с подтверждением начать тест и согл
         driver.find_element(By.XPATH, '//*[@id="btnOk"]').click()
-        #time.sleep(2)  # говно
     return 1
 
 
@@ -222,8 +227,10 @@ def get_weblist_array():
 def right_answer_click():  # собираем массив с ссылками на правильные ответы и кликаем по ним
     weblist_array = get_weblist_array()
     database_array = excelparsing.get_array_from_database()  # получаем массив с данными из базы Excel
-    answer_link_click, wait_user, err_message, founded_questions_id, founded_database_question, \
-    founded_database_answer, unidentified_question = test_solving.find_answer_to_click(weblist_array, database_array)  # получаем массив ссылок на которые нужно кликать и строковую переменную 'wait' если нужно подождать ввод юзера и сообщение об ошибке
+    answer_link_click, founded_questions_id, founded_database_question, founded_database_answer, unidentified_question \
+        = test_solving.find_answer_to_click(weblist_array, database_array)
+    # получаем массив ссылок на которые нужно кликать и строковую переменную 'wait'
+    # если нужно подождать ввод юзера и сообщение об ошибке
     driver.maximize_window()
     for num, each in enumerate(answer_link_click):
         try:
@@ -232,9 +239,9 @@ def right_answer_click():  # собираем массив с ссылками �
             question_select = driver.find_element(By.XPATH, founded_questions_mask)
             driver.execute_script("arguments[0].scrollIntoView();", question_select)  # прокрутка
             # тобы можно было кликнуть
-            WebDriverWait(driver, 10).until(EC.visibility_of(each))  # ждем чтобы элемент был виден и кликаем по нему
+            WebDriverWait(driver, 10).until(ec.visibility_of(each))  # ждем чтобы элемент был виден и кликаем по нему
             each.click()
-        except:
+        except Exception:
             print('[INFO] Произошла проблема при прокликивании вариантов ответа')
     # логгируем всякую еботню для братка
     weblist_array = get_weblist_array()  # обновляем данные с сайта (в частности для проверки checkbox)
@@ -246,13 +253,10 @@ def right_answer_click():  # собираем массив с ссылками �
             wrong_answer_list.append(num_question + 1)
     print("\nОстались не отвечеными {0} вопросов из {1}. Это вопросы №{2}".format(
         len(wrong_answer_list), len(weblist_array[4]), wrong_answer_list))
-    if wrong_answer_list:  #если есть не кликнутые ответы то ждем указаний юзера
-        wait_for_user('[ALARM] OMG!!!Прога кликнула не все варианты! Выбери ответ и нажми Enter чтобы продолжить, "x" для выхода')
+    if wrong_answer_list:  # если есть не кликнутые ответы то ждем указаний юзера
+        wait_for_user(
+            '[ALARM] OMG!!!Прога кликнула не все варианты! Выбери ответ и нажми Enter чтобы продолжить, "x" для выхода')
     random_delay_timer(len(weblist_array[0][0]))
-    # if wait_user != "":
-    #     return err_message
-    # else:
-    #     return ""
 
 
 # кликаем неверные ответы если требуется
@@ -262,9 +266,11 @@ def wrong_answer_click():
 
 # ищем и кликаем по кнопке "Ответить" и ищем следуйщий раздел и переходим на него
 def end_test_click(course_name):
-    answer_button_mask = '//*[@class[contains(.,"ui-button ui-corner-all quiz_components_button_button destroyable check_button quiz_models_components_button_check_button")]]'  # кнопка Ответить
-    endtest_button_mask = '//*[@class[contains(.,"ui-button ui-corner-all quiz_components_button_button destroyable next_button quiz_models_components_button_next_button")]]'  # кнопка Завершить тестирование
-    section_mask ='//div[@class="section-title-area"]//div[@class="before-title"]'  # маска для определения № раздела
+    answer_button_mask = '//*[@class[contains(.,"ui-button ui-corner-all quiz_components_button_button destroyable ' \
+                         'check_button quiz_models_components_button_check_button")]]'  # кнопка Ответить
+    endtest_button_mask = '//*[@class[contains(.,"ui-button ui-corner-all quiz_components_button_button destroyable ' \
+                          'next_button quiz_models_components_button_next_button")]]'  # кнопка Завершить тестирование
+    section_mask = '//div[@class="section-title-area"]//div[@class="before-title"]'  # маска для определения № раздела
     driver.switch_to.window(driver.window_handles[1])
     driver.switch_to.frame(driver.find_element(By.XPATH, '//*[@id="Content"]'))  # Пидорги засунули
     # весь контент в айфрейм, поэтому переключаемся на него сделай еще проверку на отрытие окна с
@@ -298,8 +304,7 @@ def end_test_click(course_name):
 # задержка для того чтобы загрузились скрипты, ajax и прочее гавно
 def wait_element_load(_courses_list_filter, timeout=10):
     try:
-        WebDriverWait(driver, timeout).until(EC.presence_of_element_located((By.XPATH, _courses_list_filter)))
-        #WebDriverWait(driver, timeout).until(EC.element_located_selection_state_to_be((By.XPATH, _courses_list_filter)))
+        WebDriverWait(driver, timeout).until(ec.presence_of_element_located((By.XPATH, _courses_list_filter)))
         return 1
     except TimeoutException:
         return 0
@@ -337,7 +342,7 @@ def start_light_script():
     solving_repeat = 1
     wait_for_user('Открой окно с тестом. Для продолжения нажми нажми Enter, для выхода "x"')
     while solving_repeat == 1:
-        WebDriverWait(driver, 30).until(EC.number_of_windows_to_be(2))
+        WebDriverWait(driver, 30).until(ec.number_of_windows_to_be(2))
         driver.switch_to.window(driver.window_handles[1])
         driver.switch_to.frame(driver.find_element(By.XPATH, '//*[@id="Content"]'))
         right_answer_click()
@@ -369,9 +374,8 @@ def start_script():
 
 def main():
     start_script()
-    #start_light_script()
+    # start_light_script()
 
 
 if __name__ == '__main__':
     main()
-    
