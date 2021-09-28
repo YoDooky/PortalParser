@@ -93,6 +93,7 @@ def find_courses():
         for each_list in courses_list:
             courses_list_text.append(each_list.text)
         for each_path in range(amount_of_course):
+            wait_element_load(courses_path_mask)
             driver.implicitly_wait(10)
             driver.find_elements(By.XPATH, courses_path_mask)[each_path].click()
             driver.implicitly_wait(10)  # ждем пока загрузится новая страница
