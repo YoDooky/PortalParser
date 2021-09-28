@@ -1,6 +1,7 @@
 import sys
 import time
 import random
+import re
 import excelparsing
 import test_solving
 import prog_logging
@@ -271,8 +272,8 @@ def end_test_click(course_name):
     button_element = driver.find_element(By.XPATH, answer_button_mask)
     try:
         section_text = str(driver.find_element(By.XPATH, section_mask).text)
-        section_amount = int(section_text.partition('из')[2].strip()) #- int(section_text.partition('раздел')[0].strip())  #
-        # выясняме количество  оставшихся разделов по фильтру
+        section_amount = int(re.findall(r'\d+', section_text)[1]) - int(re.findall(r'\d+', section_text)[0])  # выясняем
+        # количество  оставшихся разделов по фильтру
         for each in range(section_amount):
             driver.switch_to.window(driver.window_handles[1])
             driver.switch_to.frame(driver.find_element(By.XPATH, '//*[@id="Content"]'))
