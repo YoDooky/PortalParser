@@ -92,6 +92,7 @@ def find_courses():
             return
         for each_list in courses_list:
             courses_list_text.append(each_list.text)
+        time.sleep(2)
         for each_path in range(amount_of_course):
             wait_element_load(courses_path_mask)
             driver.implicitly_wait(10)
@@ -361,11 +362,11 @@ def start_script():
     print('---Всего назначенных курсов---')
     print(*courses_list_text, sep='\n')
     course_number = 0  # Номер курса
-    for each_url in courses_url:
-        if find_test_page(each_url, courses_list_text[course_number]):  # передаем путь до конкретного теста. Если не
+    for num_url, each_url in enumerate(courses_url):
+        if find_test_page(each_url, courses_list_text[num_url]):  # передаем путь до конкретного теста. Если не
             # находит кнопки запуска теста то переходит к следующему
             try:
-                end_test_click(courses_list_text[course_number])
+                end_test_click(courses_list_text[num_url])
             except StaleElementReferenceException:
                 print("Не везде кликнул лох")
             except NoSuchWindowException:
