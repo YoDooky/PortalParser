@@ -81,41 +81,36 @@ def find_courses():
     courses_list_text = []
     courses_url = []
     try:
-        wait_element_load(courses_list_mask)  # Ждём пока загрузятся курсы
-    except TimeoutException:
-        print('[INFO] На странице незаврешенные курсы не найдены')
-        sys.exit(0)
-    try:
         wait_element_load(courses_list_mask)
         wait_element_load(courses_path_mask)
         courses_list = driver.find_elements(By.XPATH, courses_list_mask)
         courses_path = driver.find_elements(By.XPATH, courses_path_mask)
-        amount_of_course = len(courses_path)
-        if not courses_list:
-            print('[INFO] Назначенных курсов нет')
-            return
-        for each_list in courses_list:
-            courses_list_text.append(each_list.text)
-        time.sleep(2)
-        for each_path in range(amount_of_course):
-            driver.implicitly_wait(10)
-            WebDriverWait(driver, 10).until(ec.visibility_of(driver.find_elements(By.XPATH, courses_path_mask)[each_path]))
-            driver.find_elements(By.XPATH, courses_path_mask)[each_path].click()
-            driver.implicitly_wait(10)  # ждем пока загрузится новая страница
-            courses_url.append(driver.current_url)
-            driver.get(_find_courses_link)  # Поиск курсов для сдачи
-            driver.implicitly_wait(10)  # ждем пока загрузится новая страница
-        return courses_url, courses_list_text
-    except Exception:
-        print('[INFO] Не удалось найти назначенные курсы и перейти к ним')
+    except Exception as ex:
+        print('[INFO] Не удалось найти назначенные курсы и перейти к ним. Описатель ошибки: \n {0}'.format(ex))
+        sys.exit(0)
+    amount_of_course = len(courses_path)
+    for each_list in courses_list:
+        courses_list_text.append(each_list.text)
+    for i in range(0, 10):  # делаем несколько попыток для сбора URL
+        try:
+            for each_path in range(amount_of_course):
+                driver.implicitly_wait(10)
+                WebDriverWait(driver, 10).until(ec.visibility_of(driver.find_elements(By.XPATH, courses_path_mask)[each_path]))
+                driver.find_elements(By.XPATH, courses_path_mask)[each_path].click()
+                driver.implicitly_wait(10)  # ждем пока загрузится новая страница
+                courses_url.append(driver.current_url)
+                driver.get(_find_courses_link)  # Поиск курсов для сдачи
+                driver.implicitly_wait(10)  # ждем пока загрузится новая страница
+            return courses_url, courses_list_text
+        except Exception as ex:
+            print('[ERR] {0} Пробую снова...'.format(ex))
+            time.sleep(1)
+            continue
     print('_________________________________________________________________________________________')
 
 
 # запускаем окно с тестом, если это возможно
 def find_test_page(course_url, course_name):
-    # run_test_button_mask = ['//*[@class="tree-node tree-node-type-testcontentsection"]//ancestor::td[1]//ancestor
-    # ::tr[1]//*[@class="button launchaction mira-button-primary mira-button"]',
-    # '//*[@class="mira-horizontal-layout-wrapper clearfix"]//*[@class="button mira-button-primary mira-button"]']  #
     run_test_button_mask = ['//*[@class="button launchaction mira-button-primary mira-button"]',
                             '//*[@class="mira-horizontal-layout-wrapper clearfix"]//*'
                             '[@class="button mira-button-primary mira-button"]']  #
@@ -124,34 +119,30 @@ def find_test_page(course_url, course_name):
     driver.get(course_url)  # Переход на страницу с выбранным тестом
     driver.get(course_url)  # Сука тупорылый сайт не переходит по url с первого раза
     no_test_button_counter = 0  # Счетчик не найденных кнопок с запуском теста
-    try:
-        for each_button in run_test_button_mask:
-            try:
-                if wait_element_load(each_button):
-                    wait_element_load(each_button)
-                    run_all_elements = driver.find_elements(By.XPATH, each_button)  # Ищем кнопки с запуском теста
-                    for each_element in range(0, len(run_all_elements) - 1):  # кликаем по всем, кроме запуска теста
-                        WebDriverWait(driver, 10).until(ec.visibility_of(run_all_elements[each_element]))
-                        run_all_elements[each_element].click()
-                    WebDriverWait(driver, 10).until(ec.number_of_windows_to_be(len(run_all_elements)))  # ждем пока
-                    # откроются все окна с теорией
-                    while len(driver.window_handles) > 1:  # закрываем все открытые окна, кроме основного
-                        driver.switch_to.window(driver.window_handles[1])
-                        driver.close()
-                    wait_window_load_and_switch(0)
-                    wait_element_load(each_button)
-                    driver.find_elements(By.XPATH, each_button)[-1].click()
-                    break
-                else:
-                    no_test_button_counter += 1
-                if no_test_button_counter == len(run_test_button_mask):  # если нет кнопок с запуском тогда off
-                    print('[INFO] <{0}> Не нашел кнопку запуска тестирования'.format(course_name))
-                    return 0
-            except TimeoutException:
-                continue
-    except Exception:
-        print('[INFO] <{0}> Произошла ошибка при переходе на страницу с тестом'.format(course_name))
-        return 0
+    for each_button in run_test_button_mask:
+        try:
+            if wait_element_load(each_button):
+                wait_element_load(each_button)
+                run_all_elements = driver.find_elements(By.XPATH, each_button)  # Ищем кнопки с запуском теста
+                for each_element in range(0, len(run_all_elements) - 1):  # кликаем по всем, кроме запуска теста
+                    WebDriverWait(driver, 10).until(ec.visibility_of(run_all_elements[each_element]))
+                    run_all_elements[each_element].click()
+                WebDriverWait(driver, 10).until(ec.number_of_windows_to_be(len(run_all_elements)))  # ждем пока
+                # откроются все окна с теорией
+                while len(driver.window_handles) > 1:  # закрываем все открытые окна, кроме основного
+                    driver.switch_to.window(driver.window_handles[1])
+                    driver.close()
+                wait_window_load_and_switch(0)
+                wait_element_load(each_button)
+                driver.find_elements(By.XPATH, each_button)[-1].click()
+                break
+            else:
+                no_test_button_counter += 1
+            if no_test_button_counter == len(run_test_button_mask):  # если нет кнопок с запуском тогда off
+                print('[INFO] <{0}> Не нашел кнопку запуска тестирования'.format(course_name))
+                return 0
+        except TimeoutException:
+            continue
     WebDriverWait(driver, 10).until(ec.number_of_windows_to_be(2))  # ждем появления окна с тестом и главного окна
     wait_window_load_and_switch(1)
     if wait_element_load('//*[@id="btnOk"]'):  # проверяем вылезло ли окно с подтверждением начать тест и согл
@@ -272,11 +263,6 @@ def right_answer_click():  # собираем массив с ссылками �
         wait_for_user(
             '[ALARM] OMG!!!Прога кликнула не все варианты! Выбери ответ и нажми Enter чтобы продолжить, "x" для выхода')
     random_delay_timer(len(weblist_array[0][0]))
-
-
-# кликаем неверные ответы если требуется
-def wrong_answer_click():
-    pass
 
 
 # ищем и кликаем по кнопке "Ответить" и ищем следуйщий раздел и переходим на него
