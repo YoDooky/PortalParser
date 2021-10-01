@@ -73,6 +73,83 @@ def auth():
             break
 
 
+# парсим текст с вопросом
+def get_question():
+    question_mask = '//*[@class="question-text"]'
+    question_id_mask = '//*[@class="question-text"]//ancestor::div[3]'
+    wait_element_load(question_mask)
+    wait_element_load(question_id_mask)
+    question_element = driver.find_elements(By.XPATH, question_mask)
+    question_id_element = driver.find_elements(By.XPATH, question_id_mask)
+    question_id_list = []
+    for each in question_id_element:
+        question_id = each.get_attribute('data-quiz-uid')  # находим id вопроса
+        if question_id:  # если результат не нулевой то добавляем в массив с id вопроса
+            question_id_list.append(question_id)
+    return question_element, question_id_list
+
+
+# загружаем в массив ответы на странице для указанного вопроса
+def get_answer(question_id):
+    answer_mask = "//*[@data-quiz-uid='" + question_id + "']//div//table//tbody//tr//td//div"
+    wait_element_load(answer_mask)
+    answer_element = driver.find_elements(By.XPATH, answer_mask)
+    current_answers_list = []
+    for each in answer_element:  # парсим текст из элементов (т.к. find_elements может извлекать только элементы)
+        current_answers_list.append(each.text)
+    return current_answers_list
+
+
+# ищем ссылки на ответы и кладем в массив (для того чтобы по правильным ответам потом кликнуть)
+def get_answer_link(question_id):
+    answer_link_mask = "//*[@data-quiz-uid='" + question_id + "']//div//table//tbody//tr//td//div//span"
+    wait_element_load(answer_link_mask)
+    answer_link_element = driver.find_elements(By.XPATH, answer_link_mask)
+    current_answers_link_list = []  # список ответов на текущий вопрос
+    for each in answer_link_element:
+        current_answers_link_list.append(each)
+    return current_answers_link_list
+
+
+# функция для определения был ли кликнут ответ
+def get_answer_checkbox(question_id):
+    answer_checkbox_mask = "//*[@data-quiz-uid='" + question_id + "']//tbody//*[@class[contains(.,'check-control')]]"
+    wait_element_load(answer_checkbox_mask)
+    answer_checkbox_element = driver.find_elements(By.XPATH, answer_checkbox_mask)
+    current_answer_checkbox_list = []  # список 1 (чекбокс кликнут) и 0 (чекбокс НЕ кликнут)
+    for each in answer_checkbox_element:
+        checkbox = each.get_attribute('class')
+        if checkbox == 'check-control checked' or checkbox == 'check-control  checked':
+            current_answer_checkbox_list.append(1)
+        else:
+            current_answer_checkbox_list.append(0)
+    return current_answer_checkbox_list
+
+
+# положить все вопросы, ответы, линки в один трехмерный массив
+def get_weblist_array():
+    question_element, question_id_list = get_question()
+    weblist_array = []
+    questions_list = []
+    all_question_list = []  # массив с одним массивом, чтобы было проще проходиться по элементам в цикле
+    all_answer_list = []
+    all_answer_link_list = []
+    all_answer_checkbox_list = []
+    for each in question_element:
+        questions_list.append(each.text)
+    for each in question_id_list:
+        all_answer_list.append(get_answer(each))
+        all_answer_link_list.append(get_answer_link(each))
+        all_answer_checkbox_list.append(get_answer_checkbox(each))
+    all_question_list.append(questions_list)
+    weblist_array.append(all_question_list)
+    weblist_array.append(all_answer_list)
+    weblist_array.append(all_answer_link_list)
+    weblist_array.append(question_id_list)
+    weblist_array.append(all_answer_checkbox_list)
+    return weblist_array
+
+
 # применяем фильтры для поиска названий курсов и кнопки "Запустить"
 def find_courses():
     courses_list_mask = '//*[@class="mira-grid-cell-action"]'
@@ -149,83 +226,6 @@ def find_test_page(course_url, course_name):
         WebDriverWait(driver, 10).until(ec.visibility_of(driver.find_element(By.XPATH, '//*[@id="btnOk"]')))
         driver.find_element(By.XPATH, '//*[@id="btnOk"]').click()
     return 1
-
-
-# парсим текст с вопросом
-def get_question():
-    question_mask = '//*[@class="question-text"]'
-    question_id_mask = '//*[@class="question-text"]//ancestor::div[3]'
-    wait_element_load(question_mask)
-    wait_element_load(question_id_mask)
-    question_element = driver.find_elements(By.XPATH, question_mask)
-    question_id_element = driver.find_elements(By.XPATH, question_id_mask)
-    question_id_list = []
-    for each in question_id_element:
-        question_id = each.get_attribute('data-quiz-uid')  # находим id вопроса
-        if question_id:  # если результат не нулевой то добавляем в массив с id вопроса
-            question_id_list.append(question_id)
-    return question_element, question_id_list
-
-
-# загружаем в массив ответы на странице для указанного вопроса
-def get_answer(question_id):
-    answer_mask = "//*[@data-quiz-uid='" + question_id + "']//div//table//tbody//tr//td//div"
-    wait_element_load(answer_mask)
-    answer_element = driver.find_elements(By.XPATH, answer_mask)
-    current_answers_list = []
-    for each in answer_element:  # парсим текст из элементов (т.к. find_elements может извлекать только элементы)
-        current_answers_list.append(each.text)
-    return current_answers_list
-
-
-# ищем ссылки на ответы и кладем в массив (для того чтобы по правильным ответам потом кликнуть)
-def get_answer_link(question_id):
-    answer_link_mask = "//*[@data-quiz-uid='" + question_id + "']//div//table//tbody//tr//td//div//span"
-    wait_element_load(answer_link_mask)
-    answer_link_element = driver.find_elements(By.XPATH, answer_link_mask)
-    current_answers_link_list = []  # список ответов на текущий вопрос
-    for each in answer_link_element:
-        current_answers_link_list.append(each)
-    return current_answers_link_list
-
-
-# функция для определения был ли кликнут ответ
-def get_answer_checkbox(question_id):
-    answer_checkbox_mask = "//*[@data-quiz-uid='" + question_id + "']//tbody//*[@class[contains(.,'check-control')]]"
-    wait_element_load(answer_checkbox_mask)
-    answer_checkbox_element = driver.find_elements(By.XPATH, answer_checkbox_mask)
-    current_answer_checkbox_list = []  # список 1 (чекбокс кликнут) и 0 (чекбокс НЕ кликнут)
-    for each in answer_checkbox_element:
-        checkbox = each.get_attribute('class')
-        if checkbox == 'check-control checked' or checkbox == 'check-control  checked':
-            current_answer_checkbox_list.append(1)
-        else:
-            current_answer_checkbox_list.append(0)
-    return current_answer_checkbox_list
-
-
-# положить все вопросы, ответы, линки в один трехмерный массив
-def get_weblist_array():
-    question_element, question_id_list = get_question()
-    weblist_array = []
-    questions_list = []
-    all_question_list = []  # массив с одним массивом, чтобы было проще проходиться по элементам в цикле
-    all_answer_list = []
-    all_answer_link_list = []
-    all_answer_checkbox_list = []
-    for each in question_element:
-        questions_list.append(each.text)
-    for each in question_id_list:
-        all_answer_list.append(get_answer(each))
-        all_answer_link_list.append(get_answer_link(each))
-        all_answer_checkbox_list.append(get_answer_checkbox(each))
-    all_question_list.append(questions_list)
-    weblist_array.append(all_question_list)
-    weblist_array.append(all_answer_list)
-    weblist_array.append(all_answer_link_list)
-    weblist_array.append(question_id_list)
-    weblist_array.append(all_answer_checkbox_list)
-    return weblist_array
 
 
 # кликаем по правильным ответам в тесте
@@ -330,7 +330,6 @@ def wait_window_load_and_switch(window_number, timeout=10):
         return 1
     except TimeoutException:
         return 0
-    pass
 
 
 # рандомная задержка с отображением оставшегося времени
