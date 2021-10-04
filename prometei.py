@@ -1,6 +1,7 @@
 import sys
 import time
 import random
+import math
 import re
 import excelparsing
 import test_solving
@@ -157,6 +158,7 @@ def find_courses():
     wait_window_load_and_switch(0)
     courses_list_text = []
     courses_url = []
+    passing_score_list = []
     try:
         wait_element_load(courses_list_mask)
         wait_element_load(courses_path_mask)
@@ -175,10 +177,16 @@ def find_courses():
                 WebDriverWait(driver, 10).until(ec.visibility_of(driver.find_elements(By.XPATH, courses_path_mask)[each_path]))
                 driver.find_elements(By.XPATH, courses_path_mask)[each_path].click()
                 driver.implicitly_wait(10)  # ждем пока загрузится новая страница
+                try:  # попробуем найти проходной балл для теста
+                    passing_score_list.append(check_passing_score())
+                except Exception as ex:
+                    print('[ERR] Произошла ошибка при добавлении проходного балла для курса {0}:\n {1}'
+                          .format(courses_list_text[each_path], ex))
                 courses_url.append(driver.current_url)
                 driver.get(_find_courses_link)  # Поиск курсов для сдачи
                 driver.implicitly_wait(10)  # ждем пока загрузится новая страница
-            return courses_url, courses_list_text
+
+            return courses_url, courses_list_text, passing_score_list
         except Exception as ex:
             print('[ERR] {0} Пробую снова...'.format(ex))
             time.sleep(1)
@@ -266,7 +274,7 @@ def right_answer_click():  # собираем массив с ссылками �
 
 
 # ищем и кликаем по кнопке "Ответить" и ищем следуйщий раздел и переходим на него
-def end_test_click(course_name):
+def end_test_click(course_name, passing_score):
     answer_button_mask = '//*[@class[contains(.,"ui-button ui-corner-all quiz_components_button_button destroyable ' \
                          'check_button quiz_models_components_button_check_button")]]'  # кнопка Ответить
     endtest_button_mask = '//*[@class[contains(.,"ui-button ui-corner-all quiz_components_button_button destroyable ' \
@@ -280,18 +288,20 @@ def end_test_click(course_name):
     # подтверждением сдачи и нажатием там кнопки ОК
     wait_element_load(answer_button_mask)
     button_element = driver.find_element(By.XPATH, answer_button_mask)
-    try:
+    try:  # пытаемся узнать сколько разделов в тесте
         wait_element_load(section_mask)
         section_text = str(driver.find_element(By.XPATH, section_mask).text)
-        section_amount = int(re.findall(r'\d+', section_text)[1]) - int(re.findall(r'\d+', section_text)[0])  # выясняем
-        # количество  оставшихся разделов по фильтру
+        section_amount = int(re.findall(r'\d+', section_text)[1]) - int(re.findall(r'\d+', section_text)[0]) + 1  #
+        # выясняем количество  оставшихся разделов по фильтру
         for each in range(section_amount):
             wait_window_load_and_switch(1)
             wait_element_load(frame_mask)
             driver.switch_to.frame(driver.find_element(By.XPATH, frame_mask))
             right_answer_click()
+            # if each == 0 and passing_score <= 90:  # делаем ошибки только если проходной балл < 90% и 1й раздел ПРВТ
+            #     make_wrong_answers(passing_score)
             wait_for_user(
-                '*** Доверяешь ли ты проге мешок с костями? Нажми Enter чтобы продолжить, "x" для выхода ***')
+                '*** Доверяешь ли ты проге? Нажми Enter чтобы продолжить, "x" для выхода ***')
             button_element.click()
     except NoSuchElementException:
         print('[INFO] <{0}> В данном тесте только один раздел'.format(course_name))
@@ -299,8 +309,10 @@ def end_test_click(course_name):
         wait_element_load(frame_mask)
         driver.switch_to.frame(driver.find_element(By.XPATH, frame_mask))
         right_answer_click()
+        # if passing_score <= 90:  # делаем ошибки только если проходной балл < 90%
+        #     make_wrong_answers(passing_score)
         wait_for_user(
-            '*** Доверяешь ли ты проге мешок с костями? Нажми Enter чтобы продолжить, "x" для выхода ***')
+            '*** Доверяешь ли ты проге? Нажми Enter чтобы продолжить, "x" для выхода ***')
         button_element.click()
     wait_element_load('//*[contains(.,"Тестирование завершено")]')
     driver.find_element(By.XPATH, endtest_button_mask).click()
@@ -309,6 +321,60 @@ def end_test_click(course_name):
     else:
         print('[INFO] <{0}> Назначенный тест НЕ сдан'.format(course_name))
     driver.close()
+
+
+# делаем ошибки смотря на проходной бал кроме ПРВТ. Везде где меньше 100% делаем одну ошибку, но чтобы было не менее 90%
+# в ПРВТ делаем 1-2 ошибки рандомно в 1м разделе
+def make_wrong_answers(passing_score):
+    weblist_array = get_weblist_array()
+    wrong_answers_count = math.ceil(random.randint(90, 91) / (100 / len(weblist_array[0][0])))  # считаем рандомное
+    # количество ошибок которое нужно сделать в тесте
+    wrong_counter = 0  # количество уже сделанных ошибок
+    wrong_answer_link_click = []  # лист с рандомно выбранными неправильными ответами
+    wrong_question_id = []  # лист с ID неверно кликнутых вопросов
+    for num_question, each_question in enumerate(weblist_array[0][0]):
+        for each_answer in weblist_array[4][num_question]:
+            if wrong_counter >= wrong_answers_count:
+                break
+            if sum(each_answer) > 1:  # если вопрос с несколькими вариантами ответов, то
+                wrong_question_id.extend(weblist_array[3][num_question])  # добавляем ID вопроса как неправильного
+                wrong_counter += 1
+                for every in each_answer:  # читаем каждый вариант ответа
+                    if every:  # если был выбран, то добавляем в массив чтобы выбора не было
+                        wrong_answer_link_click.append(weblist_array[2][num_question][every])  # снимаем checkbox
+                        # c верного ответа
+                for i in range(sum(each_answer)):  # сколько дано вариантов, столько и делаем неправильных вариантов
+                    for every in each_answer:
+                        if not every:
+                            wrong_answer_link_click.append(weblist_array[2][num_question][every])
+            else:  # если остались вопросы только с одним вариантом ответа то делаем ошибки в нем
+                pass
+    for num, each in enumerate(wrong_answer_link_click):
+        try:
+            wait_element_load('//*//div//table//tbody//tr//td//div//span')
+            wrong_questions_mask = "//*[@data-quiz-uid='" + wrong_question_id[num] + "']"
+            wait_element_load(wrong_questions_mask)
+            question_select = driver.find_element(By.XPATH, wrong_questions_mask)
+            driver.execute_script("arguments[0].scrollIntoView();", question_select)  # прокрутка
+            # чтобы можно было кликнуть
+            WebDriverWait(driver, 10).until(ec.visibility_of(each))  # ждем чтобы элемент был виден и кликаем по нему
+            each.click()
+        except Exception as ex:
+            print('[INFO] Произошла проблема при прокликивании неверных вариантов ответа:\n {0}'.format(ex))
+
+
+# функция для нахождения проходного бала
+def check_passing_score():
+    passing_score_mask = '//*[@class="state mira-data-view-table-state-list"]//*[contains(text(),"%")]'
+    wait_element_load(passing_score_mask)
+    try:
+        passing_score_value = driver.find_elements(By.XPATH, passing_score_mask)[-1].get_attribute('innerText')  # суки
+        # скрыли текст, а эта штука как говорится working like a charm
+        passing_score_value = int(re.findall(r'\d+', passing_score_value)[0])  # находим значение проходного балла
+    except Exception as ex:
+        print('[ERR] {0} Нет значения проходного балла. Вписываю значение 90 чи как'.format(ex))
+        passing_score_value = 90
+    return passing_score_value
 
 
 # задержка для того чтобы загрузились скрипты, ajax и прочее гавно
@@ -369,10 +435,13 @@ def start_light_script():
 
 # запускаем скрипта с полным автоматическим решением теста (включая поиск тем и переключение по темам)
 def start_script():
+    change_timezone_button_mask = '//*[@class="button mira-button"]//*[contains(text(),"Отменить")]'
     login()
     auth()
+    if wait_element_load(change_timezone_button_mask):  # смотрим есть ли кнопка отмены смены часового пояса и отменяем
+        driver.find_elements(By.XPATH, change_timezone_button_mask)[-1].click()
     driver.get(_find_courses_link)  # Поиск курсов для сдачи
-    courses_url, courses_list_text = find_courses()  # Найти курсы
+    courses_url, courses_list_text, passing_score_list = find_courses()  # Найти курсы
     print('---Всего назначенных курсов---')
     print(*courses_list_text, sep='\n')
     course_number = 0  # Номер курса
@@ -380,7 +449,7 @@ def start_script():
         if find_test_page(each_url, courses_list_text[num_url]):  # передаем путь до конкретного теста. Если не
             # находит кнопки запуска теста то переходит к следующему
             try:
-                end_test_click(courses_list_text[num_url])
+                end_test_click(courses_list_text[num_url], passing_score_list[num_url])
             except StaleElementReferenceException:
                 print("Не везде кликнул лох")
             except NoSuchWindowException:
@@ -396,3 +465,4 @@ def main():
 
 if __name__ == '__main__':
     main()
+    sys.exit()
