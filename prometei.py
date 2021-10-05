@@ -6,6 +6,7 @@ import re
 import excelparsing
 import test_solving
 import prog_logging
+from playsound import playsound
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
@@ -18,8 +19,8 @@ from selenium.common.exceptions import TimeoutException
 from selenium.common.exceptions import NoSuchWindowException
 from selenium.common.exceptions import NoSuchElementException
 
-username = "79833207865"  # "Mikhailov_DA"  # Имя юзера (впоследствии получаемое через бота)
-password = "0Jh#8GPT"  # "Bb-pGE58"  # Пароль юзера (впоследствии получаемый через бота)
+username = "79833207865"#"Mikhailov_DA"#  Имя юзера (впоследствии получаемое через бота)
+password = "0Jh#8GPT"#"Bb-pGE58"# Пароль юзера (впоследствии получаемый через бота)
 d = DesiredCapabilities.CHROME
 d['goog:loggingPrefs'] = {'performance': 'ALL'}
 files_path = "C:/Prometei/"  # путь к папке со всеми файлами (драйвер хрома, база данных и т.п.)
@@ -270,7 +271,10 @@ def right_answer_click():  # собираем массив с ссылками �
     if wrong_answer_list:  # если есть не кликнутые ответы то ждем указаний юзера
         wait_for_user(
             '[ALARM] OMG!!!Прога кликнула не все варианты! Выбери ответ и нажми Enter чтобы продолжить, "x" для выхода')
-    random_delay_timer(len(weblist_array[0][0]))
+    questions_symbols_count = 0
+    for each in weblist_array[0][0]:  # считаем общее количество символов во всех вопросах
+        questions_symbols_count += len(each)
+    random_delay_timer(questions_symbols_count)  # в зависимости от количества символово делаем соотв. задержку
 
 
 # ищем и кликаем по кнопке "Ответить" и ищем следуйщий раздел и переходим на него
@@ -298,8 +302,8 @@ def end_test_click(course_name, passing_score):
             wait_element_load(frame_mask)
             driver.switch_to.frame(driver.find_element(By.XPATH, frame_mask))
             right_answer_click()
-            # if each == 0 and passing_score <= 90:  # делаем ошибки только если проходной балл < 90% и 1й раздел ПРВТ
-            #     make_wrong_answers(passing_score)
+            if each == 0 and passing_score <= 90:  # делаем ошибки только если проходной балл < 90% и 1й раздел ПРВТ
+                make_wrong_answers()
             wait_for_user(
                 '*** Доверяешь ли ты проге? Нажми Enter чтобы продолжить, "x" для выхода ***')
             button_element.click()
@@ -309,8 +313,8 @@ def end_test_click(course_name, passing_score):
         wait_element_load(frame_mask)
         driver.switch_to.frame(driver.find_element(By.XPATH, frame_mask))
         right_answer_click()
-        # if passing_score <= 90:  # делаем ошибки только если проходной балл < 90%
-        #     make_wrong_answers(passing_score)
+        if passing_score <= 90:  # делаем ошибки только если проходной балл < 90%
+            make_wrong_answers()
         wait_for_user(
             '*** Доверяешь ли ты проге? Нажми Enter чтобы продолжить, "x" для выхода ***')
         button_element.click()
@@ -325,34 +329,64 @@ def end_test_click(course_name, passing_score):
 
 # делаем ошибки смотря на проходной бал кроме ПРВТ. Везде где меньше 100% делаем одну ошибку, но чтобы было не менее 90%
 # в ПРВТ делаем 1-2 ошибки рандомно в 1м разделе
-def make_wrong_answers(passing_score):
+def make_wrong_answers():
     weblist_array = get_weblist_array()
-    wrong_answers_count = math.ceil(random.randint(90, 91) / (100 / len(weblist_array[0][0])))  # считаем рандомное
+    wrong_answers_count = len(weblist_array[0][0]) - math.ceil(random.randint(90, 91) /
+                                                               (100 / len(weblist_array[0][0])))  # считаем рандомное
     # количество ошибок которое нужно сделать в тесте
+    if wrong_answers_count == 0:  # количество ошибок не должно быть равно нулю
+        wrong_answers_count = 1
     wrong_counter = 0  # количество уже сделанных ошибок
     wrong_answer_link_click = []  # лист с рандомно выбранными неправильными ответами
     wrong_question_id = []  # лист с ID неверно кликнутых вопросов
-    for num_question, each_question in enumerate(weblist_array[0][0]):
-        for each_answer in weblist_array[4][num_question]:
+    wrong_answer_number_list = []  # лист с номерами вопросов на которые даны неверные ответы
+    for num_answer, each_answer in enumerate(weblist_array[4]):
+        if wrong_counter >= wrong_answers_count:
+            break
+        if sum(each_answer) > 1:  # если вопрос с несколькими вариантами ответов, то
+            wrong_counter += 1
+            for num, every in enumerate(each_answer):  # читаем каждый вариант ответа
+                if every:  # если был выбран, то добавляем в массив чтобы выбора не было
+                    wrong_answer_link_click.append(weblist_array[2][num_answer][num])  # снимаем checkbox
+                    wrong_question_id.append(weblist_array[3][num_answer])  # добавляем ID вопроса как неправильного
+                    # c верного ответа
+                    if not num_answer + 1 in wrong_answer_number_list:  # добавляем № невернокликнутого вопроса
+                        wrong_answer_number_list.append(num_answer + 1)
+                    break
+            for num, every in enumerate(each_answer):  # читаем каждый вариант ответа
+                if not every:  # если не был выбран ответ и сумма неверных
+                    # ответов не превышает сумму верных, то добавляем в массив чтобы сделать неверные ответы
+                    wrong_answer_link_click.append(weblist_array[2][num_answer][num])
+                    wrong_question_id.append(weblist_array[3][num_answer])  # добавляем ID вопроса как неправильного
+                    if not num_answer + 1 in wrong_answer_number_list:  # добавляем № невернокликнутого вопроса
+                        wrong_answer_number_list.append(num_answer + 1)
+                    break
+    if wrong_counter < wrong_answers_count:
+        for num_answer, each_answer in enumerate(weblist_array[4]):
             if wrong_counter >= wrong_answers_count:
                 break
-            if sum(each_answer) > 1:  # если вопрос с несколькими вариантами ответов, то
-                wrong_question_id.extend(weblist_array[3][num_question])  # добавляем ID вопроса как неправильного
-                wrong_counter += 1
-                for every in each_answer:  # читаем каждый вариант ответа
-                    if every:  # если был выбран, то добавляем в массив чтобы выбора не было
-                        wrong_answer_link_click.append(weblist_array[2][num_question][every])  # снимаем checkbox
-                        # c верного ответа
-                for i in range(sum(each_answer)):  # сколько дано вариантов, столько и делаем неправильных вариантов
-                    for every in each_answer:
-                        if not every:
-                            wrong_answer_link_click.append(weblist_array[2][num_question][every])
-            else:  # если остались вопросы только с одним вариантом ответа то делаем ошибки в нем
-                pass
+            for num, every in enumerate(each_answer):  # читаем каждый вариант ответа
+                if every and not weblist_array[2][num_answer][num] in wrong_answer_link_click:  # если был выбран,
+                    # и такого же елемента нет в листе то добавляем в массив чтобы выбора не было
+                    wrong_answer_link_click.append(weblist_array[2][num_answer][num])  # снимаем checkbox
+                    # c верного ответа
+                    wrong_question_id.append(weblist_array[3][num_answer])  # добавляем ID вопроса как неправильного
+                    if not num_answer + 1 in wrong_answer_number_list:  # добавляем № невернокликнутого вопроса
+                        wrong_answer_number_list.append(num_answer + 1)
+                    break
+            for num, every in enumerate(each_answer):  # читаем каждый вариант ответа
+                if not every and not weblist_array[2][num_answer][num] in wrong_answer_link_click:  # если не был выбран
+                    # и такого же елемента нет в листе то добавляем в массив чтобы сделать неверные ответы
+                    wrong_answer_link_click.append(weblist_array[2][num_answer][num])
+                    wrong_question_id.append(weblist_array[3][num_answer])  # добавляем ID вопроса как неправильного
+                    if not num_answer + 1 in wrong_answer_number_list:  # добавляем № невернокликнутого вопроса
+                        wrong_answer_number_list.append(num_answer + 1)
+                    break
+            wrong_counter += 1
     for num, each in enumerate(wrong_answer_link_click):
         try:
             wait_element_load('//*//div//table//tbody//tr//td//div//span')
-            wrong_questions_mask = "//*[@data-quiz-uid='" + wrong_question_id[num] + "']"
+            wrong_questions_mask = "//*[@data-quiz-uid='{0}']".format(wrong_question_id[num])
             wait_element_load(wrong_questions_mask)
             question_select = driver.find_element(By.XPATH, wrong_questions_mask)
             driver.execute_script("arguments[0].scrollIntoView();", question_select)  # прокрутка
@@ -361,6 +395,7 @@ def make_wrong_answers(passing_score):
             each.click()
         except Exception as ex:
             print('[INFO] Произошла проблема при прокликивании неверных вариантов ответа:\n {0}'.format(ex))
+    print('[INFO] Сделаны ошибки в вопросах №{0}'.format(wrong_answer_number_list))
 
 
 # функция для нахождения проходного бала
@@ -378,7 +413,7 @@ def check_passing_score():
 
 
 # задержка для того чтобы загрузились скрипты, ajax и прочее гавно
-def wait_element_load(_courses_list_filter, timeout=10):
+def wait_element_load(_courses_list_filter, timeout=15):
     try:
         WebDriverWait(driver, timeout).until(ec.presence_of_element_located((By.XPATH, _courses_list_filter)))
         return 1
@@ -387,7 +422,7 @@ def wait_element_load(_courses_list_filter, timeout=10):
 
 
 # функция ожидания загрузки окон и переключения на целевое окно (1й аргумент функции)
-def wait_window_load_and_switch(window_number, timeout=10):
+def wait_window_load_and_switch(window_number, timeout=15):
     try:
         driver.implicitly_wait(timeout)
         driver.switch_to.window(driver.window_handles[window_number])
@@ -400,7 +435,7 @@ def wait_window_load_and_switch(window_number, timeout=10):
 
 # рандомная задержка с отображением оставшегося времени
 def random_delay_timer(timer_multiply=1):
-    delay = random.randint(59, 119) * timer_multiply
+    delay = random.randint(int(timer_multiply/5), int(timer_multiply/2))
     for remaining in range(delay, 0, -1):
         sys.stdout.write("\r")
         sys.stdout.write("{:2d} секунд осталось из {:2d} секунд.".format(remaining, delay))
@@ -412,6 +447,7 @@ def random_delay_timer(timer_multiply=1):
 # ожидание ввода пользователя
 def wait_for_user(err_message):
     print(err_message)
+    playsound('C:\Prometei\heyuser.mp3')
     accept = input()
     if accept == 'x':
         sys.exit()
@@ -451,9 +487,9 @@ def start_script():
             try:
                 end_test_click(courses_list_text[num_url], passing_score_list[num_url])
             except StaleElementReferenceException:
-                print("Не везде кликнул лох")
+                print("[ERR] <{0}> Не везде кликнул".format(courses_list_text[num_url]))
             except NoSuchWindowException:
-                print('[INFO] Не удалось перейти на страницу со всеми тестами')
+                print('[INFO] <{0}> Не удалось перейти на страницу со всеми тестами'.format(courses_list_text[num_url]))
         course_number += 1
     sys.exit()
 
@@ -461,8 +497,10 @@ def start_script():
 def main():
     start_script()
     # start_light_script()
+    sys.exit()
 
 
 if __name__ == '__main__':
     main()
+    wait_for_user('За {0} курсы пройдены. Нажми Enter для завершения'.format(username))
     sys.exit()
