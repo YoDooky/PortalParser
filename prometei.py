@@ -6,6 +6,7 @@ import re
 import excelparsing
 import test_solving
 import prog_logging
+#import playsound
 from playsound import playsound
 from selenium import webdriver
 from selenium.webdriver.common.by import By
@@ -19,12 +20,14 @@ from selenium.common.exceptions import TimeoutException
 from selenium.common.exceptions import NoSuchWindowException
 from selenium.common.exceptions import NoSuchElementException
 
-username = "79140020797"#"Mikhailov_DA"#"79833207865"#  Имя юзера (впоследствии получаемое через бота)89120067386
-password = "%@hrDv3Q"#"Bb-pGE58"#"0Jh#8GPT"# Пароль юзера (впоследствии получаемый через бота)&RcXu*WD
+username = "89120067386"#"79140020797"#"Mikhailov_DA"#"79833207865"#  Имя юзера (впоследствии получаемое через бота)
+password = "&RcXu*WD"#"%@hrDv3Q"#"Bb-pGE58"#"0Jh#8GPT"# Пароль юзера (впоследствии получаемый через бота)&RcXu*WD
 general_log = []  # итоговый лог
 d = DesiredCapabilities.CHROME
 d['goog:loggingPrefs'] = {'performance': 'ALL'}
 files_path = "C:/Prometei/"  # путь к папке со всеми файлами (драйвер хрома, база данных и т.п.)
+#music_path = 'C:\\Prometei\\heyuser.wav'
+music_path = 'heyuser.mp3'
 options = Options()
 options.add_argument('--log-level=3')
 driver = webdriver.Chrome(
@@ -175,7 +178,9 @@ def find_courses():
     for i in range(0, 10):  # делаем несколько попыток для сбора URL
         try:
             for each_path in range(amount_of_course):
+                driver.get(_find_courses_link)  # Поиск курсов для сдачи
                 driver.implicitly_wait(10)
+                time.sleep(2)
                 WebDriverWait(driver, 10).until(ec.visibility_of(driver.find_elements(By.XPATH, courses_path_mask)[each_path]))
                 driver.find_elements(By.XPATH, courses_path_mask)[each_path].click()
                 driver.implicitly_wait(10)  # ждем пока загрузится новая страница
@@ -213,6 +218,7 @@ def run_theory_on_page(course_url, course_name):
             for each_element in range(0, len(run_all_elements)):  # кликаем по всем кнопкам запуска теории
                 for i in range(10):  # делаем 10 попыток кликнуть
                     try:
+                        time.sleep(2)
                         driver.switch_to.window(driver.window_handles[0])
                         wait_element_load(each_mask)
                         driver.find_elements(By.XPATH, each_mask)[each_element].click()
@@ -248,6 +254,7 @@ def find_amount_of_tests_on_page(course_url, course_name):
     for each_button in run_test_button_mask:
         if wait_element_load(each_button):
             tests_counter += len(driver.find_elements(By.XPATH, each_button))  # ищем все тесты на странице и кол-во
+            break
     print('[INFO] <{0}> В курсе всего {1} тестов'.format(course_name, tests_counter))
     general_log.append('[INFO] <{0}> В курсе всего {1} тестов'.format(course_name, tests_counter))
     return tests_counter
@@ -413,8 +420,8 @@ def make_wrong_answers():
     wrong_answers_count = len(weblist_array[0][0]) - math.ceil(random.randint(90, 91) /
                                                                (100 / len(weblist_array[0][0])))  # считаем рандомное
     # количество ошибок которое нужно сделать в тесте
-    if wrong_answers_count == 0:  # количество ошибок не должно быть равно нулю
-        wrong_answers_count = 1
+    # if wrong_answers_count == 0:  # количество ошибок не должно быть равно нулю
+    #     wrong_answers_count = 1
     wrong_counter = 0  # количество уже сделанных ошибок
     wrong_answer_link_click = []  # лист с рандомно выбранными неправильными ответами
     wrong_question_id = []  # лист с ID неверно кликнутых вопросов
@@ -526,7 +533,7 @@ def random_delay_timer(timer_multiply=1):
 # ожидание ввода пользователя
 def wait_for_user(err_message):
     print(err_message)
-    playsound('C:\Prometei\heyuser.mp3')
+    playsound(music_path)
     accept = input()
     if accept == 'x':
         sys.exit()
@@ -559,18 +566,23 @@ def start_script():
             driver.find_elements(By.XPATH, working_place_button_mask)[-1].click()
         if wait_element_load(change_timezone_button_mask):  # смотрим есть ли кнопка отмены смены часового пояса и отменяем
             driver.find_elements(By.XPATH, change_timezone_button_mask)[-1].click()
+    except Exception as ex:
+        print('[ERR] {0} Отсуствуют кнопки смены часового пояся и/или смены рабочего места'.format(ex))
+        playsound(music_path)
+        sys.exit()
+    try:
         driver.get(_find_courses_link)  # Поиск курсов для сдачи
         courses_url, courses_list_text, passing_score_list = find_courses()  # Найти курсы
     except Exception as ex:
-        print('[ERR] {0} Не удалось осуществить поиск URL до курсов'.format(ex))
-        playsound('C:\Prometei\heyuser.mp3')
+        print('[ERR] {0} Не могу найти URL и названия назначенных тем'.format(ex))
+        playsound(music_path)
         sys.exit()
     print('---Всего назначенных курсов---')
     for num, each in enumerate(courses_list_text):
         print(num + 1, '<{0}>'.format(each))
     # Ждем от юзера ввода номеров курсов
     selected_courses = []  # курсы которые выбрал юзер
-    playsound('C:\Prometei\heyuser.mp3')
+    playsound(music_path)
     course_num = input('Выбери номера курсов через пробел и нажми Enter:')
     for each in re.findall(r'\d+', course_num):  # находим из введеного юзера только числа
         selected_courses.append(int(each))
