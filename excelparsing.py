@@ -57,8 +57,8 @@ def all_theme_list():
 def get_array_from_database():
     try:
         sheet = "ВСЕ ОТВЕТЫ ВСЕЛЕННОЙ"  # find_course_sheet()
-    except Exception:
-        print('Что-то пошло не так при поиске темы в функции "find_course_sheet"')
+    except Exception as ex:
+        print('[ERR] {0} Что-то пошло не так при поиске темы в функции "find_course_sheet"'.format(ex))
         return
     if sheet != 0:
         database_array = []  # массив с вопросами и соответствующими ответами

@@ -6,7 +6,6 @@ import re
 import excelparsing
 import test_solving
 import prog_logging
-#import playsound
 from playsound import playsound
 from selenium import webdriver
 from selenium.webdriver.common.by import By
@@ -20,13 +19,12 @@ from selenium.common.exceptions import TimeoutException
 from selenium.common.exceptions import NoSuchWindowException
 from selenium.common.exceptions import NoSuchElementException
 
-username = "89120067386"#"79140020797"#"Mikhailov_DA"#"79833207865"#  Имя юзера (впоследствии получаемое через бота)
-password = "&RcXu*WD"#"%@hrDv3Q"#"Bb-pGE58"#"0Jh#8GPT"# Пароль юзера (впоследствии получаемый через бота)&RcXu*WD
+username = "89120067386"  # "79140020797"#"Mikhailov_DA"#"79833207865"#  Имя юзера (впоследствии получаемое через бота)
+password = "&RcXu*WD"  # "%@hrDv3Q"#"Bb-pGE58"#"0Jh#8GPT"# Пароль юзера (впоследствии получаемый через бота)&RcXu*WD
 general_log = []  # итоговый лог
 d = DesiredCapabilities.CHROME
 d['goog:loggingPrefs'] = {'performance': 'ALL'}
 files_path = "C:/Prometei/"  # путь к папке со всеми файлами (драйвер хрома, база данных и т.п.)
-#music_path = 'C:\\Prometei\\heyuser.wav'
 music_path = 'heyuser.mp3'
 options = Options()
 options.add_argument('--log-level=3')
@@ -46,8 +44,8 @@ driver.maximize_window()
 def login():
     global username
     global password
-    username = input('Введи имя работяги: ')  #username#
-    password = input('Введи пароль работяги: ')  #password#
+    username = input('Введи имя работяги: ')  # username#
+    password = input('Введи пароль работяги: ')  # password#
 
 
 # ищем поля для ввода логина и пароля и логинимся
@@ -75,7 +73,9 @@ def auth():
             user_password = driver.find_element(By.XPATH, user_password_mask)
             wait_for_user(err_message)
             user_password.submit()
-        except Exception:
+        except Exception as ex:
+            print('[ERR] {0} Не удалось авторизоваться. Пробую исчо...'.format(ex))
+            time.sleep(1)
             break
 
 
@@ -181,7 +181,8 @@ def find_courses():
                 driver.get(_find_courses_link)  # Поиск курсов для сдачи
                 driver.implicitly_wait(10)
                 time.sleep(2)
-                WebDriverWait(driver, 10).until(ec.visibility_of(driver.find_elements(By.XPATH, courses_path_mask)[each_path]))
+                WebDriverWait(driver, 10).until(ec.visibility_of(driver.find_elements(
+                    By.XPATH, courses_path_mask)[each_path]))
                 driver.find_elements(By.XPATH, courses_path_mask)[each_path].click()
                 driver.implicitly_wait(10)  # ждем пока загрузится новая страница
                 try:  # попробуем найти проходной балл для теста
@@ -208,6 +209,7 @@ def run_theory_on_page(course_url, course_name):
          '//*[@class="tree-node tree-node-type-filecontentsection"]//ancestor::tr[1]//td[7]//button',
          '//*[@class="tree-node tree-node-type-resourcecontentsection"]//ancestor::tr[1]//td[7]//button']  # маски
     # для поиска теории
+    exception_count = 0  # счетчик не найденных масок кнопок запуска теории
     wait_window_load_and_switch(0)
     driver.get(course_url)  # Переход на страницу с выбранным тестом
     driver.get(course_url)  # Сука тупорылый сайт не переходит по url с первого раза
@@ -234,8 +236,10 @@ def run_theory_on_page(course_url, course_name):
                 driver.close()
             wait_window_load_and_switch(0)
         else:
-            print('[INFO] <{0}> Не нашел кнопку для чтения теории'.format(course_name))
-            general_log.append('[INFO] <{0}> Не нашел кнопку для чтения теории'.format(course_name))
+            exception_count += 1
+            if exception_count == len(run_theory_button_mask):
+                print('[INFO] <{0}> Не нашел кнопку для чтения теории'.format(course_name))
+                general_log.append('[INFO] <{0}> Не нашел кнопку для чтения теории'.format(course_name))
             continue
     return 1
 
@@ -521,7 +525,7 @@ def wait_window_load_and_switch(window_number, timeout=15):
 
 # рандомная задержка с отображением оставшегося времени
 def random_delay_timer(timer_multiply=1):
-    delay = random.randint(int(timer_multiply/5), int(timer_multiply/2))
+    delay = random.randint(int(timer_multiply/4), int(timer_multiply/2))
     for remaining in range(delay, 0, -1):
         sys.stdout.write("\r")
         sys.stdout.write("{:2d} секунд осталось из {:2d} секунд.".format(remaining, delay))
@@ -562,14 +566,13 @@ def start_script():
     login()
     auth()
     try:
-        if wait_element_load(working_place_button_mask):
+        if wait_element_load(working_place_button_mask):  # смотрим есть ли кнопка смены рабочего места и соглашаемся
             driver.find_elements(By.XPATH, working_place_button_mask)[-1].click()
-        if wait_element_load(change_timezone_button_mask):  # смотрим есть ли кнопка отмены смены часового пояса и отменяем
+        if wait_element_load(change_timezone_button_mask):  # смотрим есть ли кнопка отмены смены часового пояса и
+            # отменяем
             driver.find_elements(By.XPATH, change_timezone_button_mask)[-1].click()
     except Exception as ex:
         print('[ERR] {0} Отсуствуют кнопки смены часового пояся и/или смены рабочего места'.format(ex))
-        playsound(music_path)
-        sys.exit()
     try:
         driver.get(_find_courses_link)  # Поиск курсов для сдачи
         courses_url, courses_list_text, passing_score_list = find_courses()  # Найти курсы
@@ -588,7 +591,6 @@ def start_script():
         selected_courses.append(int(each))
     wait_for_user('Ты выбрал курсы №{0}. Нажми Enter для подтверждения, для выхода "x"'.format(selected_courses))
     for each_selected in selected_courses:  # перебираем тесты которые выбрал юзер
-        # переходим во вложенный тест (как меня это заебало) '//*[@class="mira-grid-cell  mira-grid-column-inlineOperations"]//div'
         # находим количество тестов в курсе
         amount_of_tests = find_amount_of_tests_on_page(courses_url[each_selected-1], courses_list_text[each_selected-1])
         run_theory_on_page(courses_url[each_selected - 1], courses_list_text[each_selected - 1])  # прокликиваем теорию
@@ -607,6 +609,7 @@ def start_script():
     print('************************************')
     print('В общем чо по итогу кожаный ублюдок:')
     print(*general_log, sep='\n')
+    playsound(music_path)
     sys.exit()
 
 
