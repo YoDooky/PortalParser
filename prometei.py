@@ -387,7 +387,7 @@ def end_test_click(course_name, passing_score):
             driver.switch_to.frame(driver.find_element(By.XPATH, frame_mask))
             right_answer_click()
             if each == 0 and passing_score <= 90:  # делаем ошибки только если проходной балл < 90% и 1й раздел ПРВТ
-                make_wrong_answers()
+                make_wrong_answers(1)
             # wait_for_user(
             #     '*** Доверяешь ли ты проге? Нажми Enter чтобы продолжить, "x" для выхода ***')
             driver.find_element(By.XPATH, answer_button_mask).click()
@@ -400,7 +400,7 @@ def end_test_click(course_name, passing_score):
         driver.switch_to.frame(driver.find_element(By.XPATH, frame_mask))
         right_answer_click()
         if passing_score <= 90:  # делаем ошибки только если проходной балл < 90%
-            make_wrong_answers()
+            make_wrong_answers(0)
         # wait_for_user(
         #     '*** Доверяешь ли ты проге? Нажми Enter чтобы продолжить, "x" для выхода ***')
         driver.find_element(By.XPATH, answer_button_mask).click()
@@ -419,13 +419,17 @@ def end_test_click(course_name, passing_score):
 
 # делаем ошибки смотря на проходной бал кроме ПРВТ. Везде где меньше 100% делаем одну ошибку, но чтобы было не менее 90%
 # в ПРВТ делаем 1-2 ошибки рандомно в 1м разделе
-def make_wrong_answers():
+def make_wrong_answers(test_type):  # если принимаемое значени = 1, то это ПРВТ иначе не ПРВТ
     weblist_array = get_weblist_array()
-    wrong_answers_count = len(weblist_array[0][0]) - math.ceil(random.randint(90, 91) /
-                                                               (100 / len(weblist_array[0][0])))  # считаем рандомное
-    # количество ошибок которое нужно сделать в тесте
-    # if wrong_answers_count == 0:  # количество ошибок не должно быть равно нулю
-    #     wrong_answers_count = 1
+    if test_type:  # если тест ПВРТ делаем минимум 2 ошибки с 80% результат
+        passing_score = 80
+        min_mistakes_count = 2
+    else:   # если тест не ПВРТ делаем минимум 0 ошибок с 90% результат
+        passing_score = 90
+        min_mistakes_count = 0
+    max_mistakes_count = int(len(weblist_array[0][0]) - (passing_score / (100 / len(weblist_array[0][0]))))
+    wrong_answers_count = random.randint(min_mistakes_count, max_mistakes_count)  # считаем рандомное количество ошибок
+    # которое нужно сделать в тесте
     wrong_counter = 0  # количество уже сделанных ошибок
     wrong_answer_link_click = []  # лист с рандомно выбранными неправильными ответами
     wrong_question_id = []  # лист с ID неверно кликнутых вопросов
@@ -512,7 +516,7 @@ def wait_element_load(_courses_list_filter, timeout=15):
 
 
 # функция ожидания загрузки окон и переключения на целевое окно (1й аргумент функции)
-def wait_window_load_and_switch(window_number, timeout=15):
+def wait_window_load_and_switch(window_number, timeout=1):
     try:
         driver.implicitly_wait(timeout)
         WebDriverWait(driver, timeout).until(ec.number_of_windows_to_be(window_number + 1))
@@ -524,8 +528,9 @@ def wait_window_load_and_switch(window_number, timeout=15):
 
 
 # рандомная задержка с отображением оставшегося времени
-def random_delay_timer(timer_multiply=1):
-    delay = random.randint(int(timer_multiply/4), int(timer_multiply/2))
+def random_delay_timer(timer_multiply=1000):
+    #delay = random.randint(int((timer_multiply/9)/10), int((timer_multiply/12)/10))
+    delay = timer_multiply
     for remaining in range(delay, 0, -1):
         sys.stdout.write("\r")
         sys.stdout.write("{:2d} секунд осталось из {:2d} секунд.".format(remaining, delay))
