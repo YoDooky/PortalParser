@@ -380,6 +380,7 @@ def end_test_click(course_name, passing_score):
                           'next_button quiz_models_components_button_next_button")]]'  # кнопка Завершить тестирование
     section_mask = '//div[@class="section-title-area"]//div[@class="before-title"]'  # маска для определения № раздела
     frame_mask = '//*[@id="Content"]'
+    first_section_mask = '//div[@class="section-title-area"]//*[contains(text(),"Раздел 1")]'
     unknown_question_amount = 0  # переменная для ожидания ввода юзера, если прога не нашла ответ в базе то нужно
     # подождать экран  результатом теста, чтобы выяснил юзер правильно ли он ткнул вручную
     wait_window_load_and_switch(1)
@@ -394,11 +395,13 @@ def end_test_click(course_name, passing_score):
         section_amount = int(re.findall(r'\d+', section_text)[1]) - int(re.findall(r'\d+', section_text)[0]) + 1  #
         # выясняем количество  оставшихся разделов по фильтру
         for each in range(section_amount):
+            time.sleep(10)  # пока вот такое гавно
             wait_window_load_and_switch(1)
             wait_element_load(frame_mask)
             driver.switch_to.frame(driver.find_element(By.XPATH, frame_mask))
             unknown_question_amount += right_answer_click()
-            if each == 0 and passing_score <= 90:  # делаем ошибки только если проходной балл < 90% и 1й раздел ПРВТ
+            if each == 0 and wait_element_load(first_section_mask) and passing_score <= 90:  # делаем ошибки только если
+                # проходной балл < 90% и 1й раздел ПРВТ
                 make_wrong_answers(1, unknown_question_amount)
             # wait_for_user(*** Доверяешь ли ты проге? Нажми Enter чтобы продолжить, "x" для выхода ***')
             time.sleep(5)  # пока вот такое гавно
@@ -481,7 +484,7 @@ def make_wrong_answers(test_type, unknown_question_amount):  # если прин
     wrong_answers_count = random.randint(min_mistakes_count, max_mistakes_count) - unknown_question_amount  # считаем
     # рандомное количество ошибок которое нужно сделать в тесте за вычетом ненайденных ответов
     if wrong_answers_count <= 0:
-        print('[INFO] Ошибок делать не нужно, т.к. разница м/у рандомным кол-вом ошибок и ненайденным вопросами = 0')
+        print('[INFO] Ошибок делать не нужно, т.к. разница м/у рандомным кол-вом ошибок и ненайденным вопросами <= 0')
         return
     wrong_counter = 0  # количество уже сделанных ошибок
     wrong_answer_link_click = []  # лист с рандомно выбранными неправильными ответами
