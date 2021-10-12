@@ -1,7 +1,6 @@
 import sys
 import time
 import random
-import math
 import re
 import excelparsing
 import test_solving
@@ -19,9 +18,10 @@ from selenium.common.exceptions import TimeoutException
 from selenium.common.exceptions import NoSuchWindowException
 from selenium.common.exceptions import NoSuchElementException
 
-username = "89120067386"  # "79140020797"#"Mikhailov_DA"#"79833207865"#  Имя юзера (впоследствии получаемое через бота)
-password = "&RcXu*WD"  # "%@hrDv3Q"#"Bb-pGE58"#"0Jh#8GPT"# Пароль юзера (впоследствии получаемый через бота)&RcXu*WD
+username = "79833207865"#"Mikhailov_DA"#"89120067386"  # "79140020797"#  Имя юзера (впоследствии получаемое через бота)
+password = "0Jh#8GPT"#"Bb-pGE58"#"&RcXu*WD"  # "%@hrDv3Q"## Пароль юзера (впоследствии получаемый через бота)&RcXu*WD
 general_log = []  # итоговый лог
+course_log = []  # лог по окончании теста. 1 - неизвестные вопросы, 2 - неверные вопросы, 3 - неверные ответы
 d = DesiredCapabilities.CHROME
 d['goog:loggingPrefs'] = {'performance': 'ALL'}
 files_path = "C:/Prometei/"  # путь к папке со всеми файлами (драйвер хрома, база данных и т.п.)
@@ -73,9 +73,9 @@ def auth():
             user_password = driver.find_element(By.XPATH, user_password_mask)
             wait_for_user(err_message)
             user_password.submit()
+            continue
         except Exception as ex:
-            print('[ERR] {0} Не удалось авторизоваться. Пробую исчо...'.format(ex))
-            time.sleep(1)
+            print('[INFO] {0} Регистрационные данные верны'.format(ex))
             break
 
 
@@ -268,8 +268,12 @@ def find_amount_of_tests_on_page(course_url, course_name):
 def run_tests_on_page(course_url, course_name, test_number):
     run_test_button_mask = ['//*[@class="tree-node tree-node-type-testcontentsection"]//ancestor::tr[1]//td[7]//button',
                        '//*[@class="mira-horizontal-layout-wrapper clearfix"]//*'
-                       '[@class="button mira-button-primary mira-button"]']  # маска для поиска кнопки запуска не ПРВТ и
-    # ПРВТ тестирования соответственно. В итоговом тесте кнопка появлятся после прохождения преъидущих
+                       '[@class="button mira-button-primary mira-button"]//*'
+                       '[contains(text(),"Запустить тест")]',
+                        '//*[@class="mira-horizontal-layout-wrapper clearfix"]//*'
+                        '[@class="button mira-button-primary mira-button"]//*'
+                        '[contains(text(),"Продолжить предыдущую попытку")]']  # маска для поиска кнопки запуска не ПРВТ
+    # и ПРВТ тестирования соответственно. В итоговом тесте кнопка появлятся после прохождения преъидущих
     button_ok = '//*[@id="btnOk"]'
     wait_window_load_and_switch(0)
     driver.get(course_url)  # Переход на страницу с выбранным тестом
@@ -304,13 +308,16 @@ def run_tests_on_page(course_url, course_name, test_number):
                 wait_window_load_and_switch(1)
                 if wait_element_load('//*[@id="btnOk"]'):  # проверяем вылезло ли окно с подтверждением начать тест
                     # и соглашаемся
-                    try:
-                        WebDriverWait(driver, 10).until(ec.visibility_of(driver.find_element(By.XPATH, button_ok)))
-                        driver.find_element(By.XPATH, button_ok).click()
-                    except TimeoutException:
-                        print('[INFO] <{0}> Не смог кликнуть кнопку подтверждения списания попытки'.format(course_name))
-                        general_log.append('[INFO] <{0}> Не смог кликнуть кнопку подтверждения списания попытки'.
-                                           format(course_name))
+                    for i in range(10):  # делаем 10 попыток кликнуть
+                        try:
+                            wait_element_load(button_ok)
+                            driver.find_element(By.XPATH, button_ok).click()
+                            break
+                        except Exception as ex:
+                            print('[ERR] <{0}> Не смог кликнуть кнопку подтверждения списания попытки, пробую снова'.
+                                  format(ex))
+                            time.sleep(1)
+                            continue
                 return 1
         else:
             no_test_button_counter += 1
@@ -328,8 +335,9 @@ def right_answer_click():  # собираем массив с ссылками �
     database_array = excelparsing.get_array_from_database()  # получаем массив с данными из базы Excel
     answer_link_click, founded_questions_id, founded_database_question, founded_database_answer, unidentified_question \
         = test_solving.find_answer_to_click(weblist_array, database_array)
-    # получаем массив ссылок на которые нужно кликать и строковую переменную 'wait'
-    # если нужно подождать ввод юзера и сообщение об ошибке
+    unknown_question_amount = 0  # переменная для подсчета не найденных вопросов и последующего ожидания ввода юзера,
+    # если прога не нашла ответ в базе и нужно подождать экран с результатом теста, чтобы выяснил юзер правильно ли он
+    # ткнул вручную
     driver.maximize_window()
     for num, each in enumerate(answer_link_click):
         try:
@@ -347,19 +355,21 @@ def right_answer_click():  # собираем массив с ссылками �
     weblist_array = get_weblist_array()  # обновляем данные с сайта (в частности для проверки checkbox)
     prog_logging.get_logs(weblist_array, founded_database_question, founded_database_answer, unidentified_question)
     # считаем кол-во не отвеченных вопросов
-    wrong_answer_list = []
+    unknown_answer_list = []
+    unknown_question_list = []  # массив вопросов которые не нашла в базе прога
     for num_question, each_question in enumerate(weblist_array[4]):
         if not sum(each_question):
-            wrong_answer_list.append(num_question + 1)
+            unknown_answer_list.append(num_question + 1)
+            unknown_question_list.append(weblist_array[0][0][num_question])
+
+    course_log.append(unknown_question_list)
     print("\nОстались не отвечеными {0} вопросов из {1}. Это вопросы №{2}".format(
-        len(wrong_answer_list), len(weblist_array[4]), wrong_answer_list))
-    if wrong_answer_list:  # если есть не кликнутые ответы то ждем указаний юзера
+        len(unknown_answer_list), len(weblist_array[4]), unknown_answer_list))
+    if unknown_answer_list:  # если есть не кликнутые ответы то ждем указаний юзера
         wait_for_user(
             '[ALARM] OMG!!!Прога кликнула не все варианты! Выбери ответ и нажми Enter чтобы продолжить, "x" для выхода')
-    questions_symbols_count = 0
-    for each in weblist_array[0][0]:  # считаем общее количество символов во всех вопросах
-        questions_symbols_count += len(each)
-    random_delay_timer(questions_symbols_count)  # в зависимости от количества символово делаем соотв. задержку
+        unknown_question_amount = len(unknown_answer_list)
+    return unknown_question_amount
 
 
 # ищем и кликаем по кнопке "Ответить" и ищем следуйщий раздел и переходим на него
@@ -370,6 +380,8 @@ def end_test_click(course_name, passing_score):
                           'next_button quiz_models_components_button_next_button")]]'  # кнопка Завершить тестирование
     section_mask = '//div[@class="section-title-area"]//div[@class="before-title"]'  # маска для определения № раздела
     frame_mask = '//*[@id="Content"]'
+    unknown_question_amount = 0  # переменная для ожидания ввода юзера, если прога не нашла ответ в базе то нужно
+    # подождать экран  результатом теста, чтобы выяснил юзер правильно ли он ткнул вручную
     wait_window_load_and_switch(1)
     wait_element_load(frame_mask)
     driver.switch_to.frame(driver.find_element(By.XPATH, frame_mask))  # Пидорги засунули
@@ -385,28 +397,66 @@ def end_test_click(course_name, passing_score):
             wait_window_load_and_switch(1)
             wait_element_load(frame_mask)
             driver.switch_to.frame(driver.find_element(By.XPATH, frame_mask))
-            right_answer_click()
+            unknown_question_amount += right_answer_click()
             if each == 0 and passing_score <= 90:  # делаем ошибки только если проходной балл < 90% и 1й раздел ПРВТ
-                make_wrong_answers(1)
-            # wait_for_user(
-            #     '*** Доверяешь ли ты проге? Нажми Enter чтобы продолжить, "x" для выхода ***')
-            driver.find_element(By.XPATH, answer_button_mask).click()
+                make_wrong_answers(1, unknown_question_amount)
+            # wait_for_user(*** Доверяешь ли ты проге? Нажми Enter чтобы продолжить, "x" для выхода ***')
             time.sleep(5)  # пока вот такое гавно
+            # Считаем количество символов во всех вопросах и делаем соответствующую задержку
+            weblist_array = get_weblist_array()
+            questions_symbols_count = 0
+            for every in weblist_array[0][0]:  # считаем общее количество символов во всех вопросах
+                questions_symbols_count += len(every)
+            random_delay_timer(questions_symbols_count)  # в зависимости от количества символово делаем соотв. задержку
+            for i in range(10):  # делаем 10 попыток кликнуть на кнопку Ответить
+                try:
+                    driver.find_element(By.XPATH, answer_button_mask).click()
+                    break
+                except Exception as ex:
+                    print('[ERR] <{0}> Не смог кликнуть кнопку Ответить, пробую снова'.format(ex))
+                    time.sleep(1)
+                    continue
     except NoSuchElementException:
         print('[INFO] <{0}> В данном тесте только один раздел'.format(course_name))
         general_log.append('[INFO] <{0}> В данном тесте только один раздел'.format(course_name))
         wait_window_load_and_switch(1)
         wait_element_load(frame_mask)
         driver.switch_to.frame(driver.find_element(By.XPATH, frame_mask))
-        right_answer_click()
+        unknown_question_amount = right_answer_click()
         if passing_score <= 90:  # делаем ошибки только если проходной балл < 90%
-            make_wrong_answers(0)
-        # wait_for_user(
-        #     '*** Доверяешь ли ты проге? Нажми Enter чтобы продолжить, "x" для выхода ***')
-        driver.find_element(By.XPATH, answer_button_mask).click()
+            make_wrong_answers(0, unknown_question_amount)
+        # wait_for_user('*** Доверяешь ли ты проге? Нажми Enter чтобы продолжить, "x" для выхода ***')
         time.sleep(5)  # пока вот такое гавно
+        # Считаем количество символов во всех вопросах и делаем соответствующую задержку
+        weblist_array = get_weblist_array()
+        questions_symbols_count = 0
+        for every in weblist_array[0][0]:  # считаем общее количество символов во всех вопросах
+            questions_symbols_count += len(every)
+        random_delay_timer(questions_symbols_count)  # в зависимости от количества символово делаем соотв. задержку
+        for i in range(10):  # делаем 10 попыток кликнуть на кнопку Ответить
+            try:
+                driver.find_element(By.XPATH, answer_button_mask).click()
+                break
+            except Exception as ex:
+                print('[ERR] <{0}> Не смог кликнуть кнопку Ответить, пробую снова'.format(ex))
+                time.sleep(1)
+                continue
     wait_element_load('//*[contains(.,"Тестирование завершено")]')
     driver.find_element(By.XPATH, endtest_button_mask).click()
+    if unknown_question_amount:  # если был ткнут вариант ответа вручную, то ждем подтверждения
+        wait_for_user('[ALARM] <[0]> Непонятно правильный ли вариант юзер ткнул. Нажми Enter если чекнул все варианты,'
+                      ' или x чтобы выйти'.format(course_name))
+        try:
+            for each in course_log[0]:
+                print('Неизвестный вопрос: {0}'.format(each))
+        except Exception as ex:
+            print('{0} Нет неизвестных вопросов'.format(ex))
+        try:
+            for num, each in enumerate(course_log[1]):
+                print('Неверно кликнутый вопрос и ответы на него: {0}\n-->{1}'.format(each, course_log[2][num]))
+        except Exception as ex:
+            print('{0} Нет неверно кликнутых вопросов'.format(ex))
+        playsound(music_path)
     if wait_element_load('//*[@class="testing_success"]'):
         print('[INFO] <{0}> Назначенный тест сдан'.format(course_name))
         general_log.append('[INFO] <{0}> Назначенный тест сдан'.format(course_name))
@@ -419,7 +469,7 @@ def end_test_click(course_name, passing_score):
 
 # делаем ошибки смотря на проходной бал кроме ПРВТ. Везде где меньше 100% делаем одну ошибку, но чтобы было не менее 90%
 # в ПРВТ делаем 1-2 ошибки рандомно в 1м разделе
-def make_wrong_answers(test_type):  # если принимаемое значени = 1, то это ПРВТ иначе не ПРВТ
+def make_wrong_answers(test_type, unknown_question_amount):  # если принимаемое значени = 1, то это ПРВТ иначе не ПРВТ
     weblist_array = get_weblist_array()
     if test_type:  # если тест ПВРТ делаем минимум 2 ошибки с 80% результат
         passing_score = 80
@@ -428,8 +478,11 @@ def make_wrong_answers(test_type):  # если принимаемое значе
         passing_score = 90
         min_mistakes_count = 0
     max_mistakes_count = int(len(weblist_array[0][0]) - (passing_score / (100 / len(weblist_array[0][0]))))
-    wrong_answers_count = random.randint(min_mistakes_count, max_mistakes_count)  # считаем рандомное количество ошибок
-    # которое нужно сделать в тесте
+    wrong_answers_count = random.randint(min_mistakes_count, max_mistakes_count) - unknown_question_amount  # считаем
+    # рандомное количество ошибок которое нужно сделать в тесте за вычетом ненайденных ответов
+    if wrong_answers_count <= 0:
+        print('[INFO] Ошибок делать не нужно, т.к. разница м/у рандомным кол-вом ошибок и ненайденным вопросами = 0')
+        return
     wrong_counter = 0  # количество уже сделанных ошибок
     wrong_answer_link_click = []  # лист с рандомно выбранными неправильными ответами
     wrong_question_id = []  # лист с ID неверно кликнутых вопросов
@@ -489,6 +542,18 @@ def make_wrong_answers(test_type):  # если принимаемое значе
             each.click()
         except Exception as ex:
             print('[INFO] Произошла проблема при прокликивании неверных вариантов ответа:\n {0}'.format(ex))
+    wrong_question = []  # неправильные вопросы, которые прога кликнула
+    wrong_answer = []  # неправильные ответы, которые прога кликнула
+    weblist_array = get_weblist_array()
+    for each_question in wrong_answer_number_list:
+        wrong_question.append(weblist_array[0][0][each_question-1])
+        temp_wrong_answer = []  # промежуточный массив ответов
+        for num_answer, each_answer in enumerate(weblist_array[4][each_question-1]):
+            if each_answer:
+                temp_wrong_answer.append(weblist_array[1][each_question-1][num_answer])
+        wrong_answer.append(temp_wrong_answer)
+    course_log.append(wrong_question)
+    course_log.append(wrong_answer)
     print('[INFO] Сделаны ошибки в вопросах №{0}'.format(wrong_answer_number_list))
 
 
@@ -529,7 +594,6 @@ def wait_window_load_and_switch(window_number, timeout=1):
 
 # рандомная задержка с отображением оставшегося времени
 def random_delay_timer(timer_multiply=1000):
-    #delay = random.randint(int((timer_multiply/9)/10), int((timer_multiply/12)/10))
     delay = timer_multiply
     for remaining in range(delay, 0, -1):
         sys.stdout.write("\r")
@@ -550,40 +614,40 @@ def wait_for_user(err_message):
         return 1
 
 
-# запуск лайт скрипта (только прокликивание правильных ответов, юзер сам открывает страницу с вопросами)
-def start_light_script():
-    login()
-    auth()
-    solving_repeat = 1
-    wait_for_user('Открой окно с тестом. Для продолжения нажми нажми Enter, для выхода "x"')
-    while solving_repeat == 1:
-        wait_window_load_and_switch(1)
-        driver.switch_to.frame(driver.find_element(By.XPATH, '//*[@id="Content"]'))
-        right_answer_click()
-        solving_repeat = wait_for_user(
-            'Для перехода к следующим вопросам, открой окно с тестом и нажми Enter, для выхода "x"')
-
-
 # запускаем скрипта с полным автоматическим решением теста (включая поиск тем и переключение по темам)
 def start_script():
     change_timezone_button_mask = '//*[@class="button mira-button"]//*[contains(text(),"Отменить")]'
     working_place_button_mask = '//*[@class="button mira-button-primary mira-button"]'
     login()
     auth()
+    if wait_element_load(working_place_button_mask):  # смотрим есть ли кнопка смены рабочего места и согл-ся
+        for i in range(0, 10):
+            try:
+                driver.find_elements(By.XPATH, working_place_button_mask)[-1].click()
+                break
+            except Exception as ex:
+                print('[ERR] {0} Не могу кликнуть кнопку смены рабочего места, пробую снова'.format(ex))
+                time.sleep(1)
+                continue
+    if wait_element_load(change_timezone_button_mask):  # смотрим есть ли кнопка отмены смены часового пояса и отменяем
+        for i in range(0, 10):
+            try:
+                driver.find_elements(By.XPATH, change_timezone_button_mask)[-1].click()
+                break
+            except Exception as ex:
+                print('[ERR] {0} Не могу кликнуть кнопку смены часового пояса, пробую снова'.format(ex))
+                time.sleep(1)
+                continue
     try:
-        if wait_element_load(working_place_button_mask):  # смотрим есть ли кнопка смены рабочего места и соглашаемся
-            driver.find_elements(By.XPATH, working_place_button_mask)[-1].click()
-        if wait_element_load(change_timezone_button_mask):  # смотрим есть ли кнопка отмены смены часового пояса и
-            # отменяем
-            driver.find_elements(By.XPATH, change_timezone_button_mask)[-1].click()
-    except Exception as ex:
-        print('[ERR] {0} Отсуствуют кнопки смены часового пояся и/или смены рабочего места'.format(ex))
-    try:
+        driver.get(_find_courses_link)  # Поиск курсов для сдачи
         driver.get(_find_courses_link)  # Поиск курсов для сдачи
         courses_url, courses_list_text, passing_score_list = find_courses()  # Найти курсы
     except Exception as ex:
         print('[ERR] {0} Не могу найти URL и названия назначенных тем'.format(ex))
         playsound(music_path)
+        sys.exit()
+    if not courses_url:
+        print('Нет назначенных курсов')
         sys.exit()
     print('---Всего назначенных курсов---')
     for num, each in enumerate(courses_list_text):
@@ -595,13 +659,13 @@ def start_script():
     for each in re.findall(r'\d+', course_num):  # находим из введеного юзера только числа
         selected_courses.append(int(each))
     wait_for_user('Ты выбрал курсы №{0}. Нажми Enter для подтверждения, для выхода "x"'.format(selected_courses))
-    for each_selected in selected_courses:  # перебираем тесты которые выбрал юзер
-        # находим количество тестов в курсе
+    for each_selected in selected_courses:  # перебираем тесты которые выбрал юзер находим количество тестов в курсе
         amount_of_tests = find_amount_of_tests_on_page(courses_url[each_selected-1], courses_list_text[each_selected-1])
         run_theory_on_page(courses_url[each_selected - 1], courses_list_text[each_selected - 1])  # прокликиваем теорию
         for each_test in range(0, amount_of_tests):  # проходимся по всем тестам в курсе (матрёшка бля)
             try:
                 if run_tests_on_page(courses_url[each_selected-1], courses_list_text[each_selected-1], each_test):
+                    course_log.clear()  # обнуляем массив с логом от предъидущего курса
                     end_test_click(courses_list_text[each_selected-1], passing_score_list[each_selected-1])
             except StaleElementReferenceException:
                 print("[ERR] <{0}> Не везде кликнул".format(courses_list_text[each_selected-1]))
@@ -615,16 +679,16 @@ def start_script():
     print('В общем чо по итогу кожаный ублюдок:')
     print(*general_log, sep='\n')
     playsound(music_path)
-    sys.exit()
 
 
 def main():
     start_script()
-    # start_light_script()
-    sys.exit()
-
-
-if __name__ == '__main__':
-    main()
     wait_for_user('За {0} курсы пройдены. Нажми Enter для завершения'.format(username))
     sys.exit()
+
+
+main()
+sys.exit()
+# if __name__ == '__main__':
+#     main()
+
