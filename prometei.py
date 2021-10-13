@@ -31,12 +31,12 @@ options.add_argument('--log-level=3')
 driver = webdriver.Chrome(
     files_path + "chromedriver.exe", options=options)  # Это нужно чтобы можно было выгружать логи с браузера
 # (первоначально для Promitei)
-_find_courses_link = "https://hiprof.irkutskoil.ru/mira/#&step=6&measureStageStatus=NOT_FINISHED&s=" \
-                     "Q3dQ3j2436tctmcfnJys&doaction=MyMeasureStatisticsAllPeriodNotFinished&id=&type=" \
-                     "mymeasurestatisticslist&measurePeriod=ALL_PERIOD"
-# _find_courses_link = 'https://hiprof.irkutskoil.ru/mira/#&stype=sb&sb=1&step=8&id=0&type=mymeasurestatisticslist&' \
-#                        'name=%D0%A1%D1%82%D0%B0%D1%82%D0%B8%D1%81%D1%82%D0%B8%D0%BA%D0%B0+' \
-#                      '%D0%BC%D0%BE%D0%B5%D0%B3%D0%BE+%D0%BE%D0%B1%D1%83%D1%87%D0%B5%D0%BD%D0%B8%D1%8F'  # тестовая ссы
+# _find_courses_link = "https://hiprof.irkutskoil.ru/mira/#&step=6&measureStageStatus=NOT_FINISHED&s=" \
+#                      "Q3dQ3j2436tctmcfnJys&doaction=MyMeasureStatisticsAllPeriodNotFinished&id=&type=" \
+#                      "mymeasurestatisticslist&measurePeriod=ALL_PERIOD"
+_find_courses_link = 'https://hiprof.irkutskoil.ru/mira/#&stype=sb&sb=1&step=8&id=0&type=mymeasurestatisticslist&' \
+                       'name=%D0%A1%D1%82%D0%B0%D1%82%D0%B8%D1%81%D1%82%D0%B8%D0%BA%D0%B0+' \
+                     '%D0%BC%D0%BE%D0%B5%D0%B3%D0%BE+%D0%BE%D0%B1%D1%83%D1%87%D0%B5%D0%BD%D0%B8%D1%8F'  # тестовая ссы
 _auth_link = "https://hiprof.irkutskoil.ru/mira/Do?doaction=Go&s=YwSqVdexvj7jQdJp9sEs&id=0&type=customloginpage"
 driver.maximize_window()
 
@@ -175,30 +175,22 @@ def find_courses():
     amount_of_course = len(courses_path)
     for each_list in courses_list:
         courses_list_text.append(each_list.text)
-    for i in range(0, 10):  # делаем несколько попыток для сбора URL
-        try:
-            for each_path in range(amount_of_course):
-                driver.get(_find_courses_link)  # Поиск курсов для сдачи
-                driver.implicitly_wait(10)
-                time.sleep(2)
-                WebDriverWait(driver, 10).until(ec.visibility_of(driver.find_elements(
-                    By.XPATH, courses_path_mask)[each_path]))
-                driver.find_elements(By.XPATH, courses_path_mask)[each_path].click()
-                driver.implicitly_wait(10)  # ждем пока загрузится новая страница
-                try:  # попробуем найти проходной балл для теста
-                    passing_score_list.append(check_passing_score())
-                except Exception as ex:
-                    print('[ERR] Произошла ошибка при добавлении проходного балла для курса {0}:\n {1}'
-                          .format(courses_list_text[each_path], ex))
-                courses_url.append(driver.current_url)
-                driver.get(_find_courses_link)  # Поиск курсов для сдачи
-                driver.implicitly_wait(10)  # ждем пока загрузится новая страница
-            return courses_url, courses_list_text, passing_score_list
+    for each_path in range(amount_of_course):
+        driver.get(_find_courses_link)  # Поиск курсов для сдачи
+        driver.get(_find_courses_link)  # Поиск курсов для сдачи
+        driver.implicitly_wait(10)
+        time.sleep(2)
+        WebDriverWait(driver, 10).until(ec.visibility_of(driver.find_elements(
+            By.XPATH, courses_path_mask)[each_path]))
+        driver.find_elements(By.XPATH, courses_path_mask)[each_path].click()
+        driver.implicitly_wait(10)  # ждем пока загрузится новая страница
+        try:  # попробуем найти проходной балл для теста
+            passing_score_list.append(check_passing_score())
         except Exception as ex:
-            print('[ERR] {0} Пробую снова...'.format(ex))
-            time.sleep(1)
-            continue
-    print('_________________________________________________________________________________________')
+            print('[ERR] Произошла ошибка при добавлении проходного балла для курса {0}:\n {1}'
+                  .format(courses_list_text[each_path], ex))
+        courses_url.append(driver.current_url)
+    return courses_url, courses_list_text, passing_score_list
 
 
 # функция для поиска и нажатия кнопкок запуска теории
@@ -220,7 +212,7 @@ def run_theory_on_page(course_url, course_name):
             for each_element in range(0, len(run_all_elements)):  # кликаем по всем кнопкам запуска теории
                 for i in range(10):  # делаем 10 попыток кликнуть
                     try:
-                        time.sleep(2)
+                        time.sleep(2)  # пока такое гавно
                         driver.switch_to.window(driver.window_handles[0])
                         wait_element_load(each_mask)
                         driver.find_elements(By.XPATH, each_mask)[each_element].click()
@@ -231,9 +223,11 @@ def run_theory_on_page(course_url, course_name):
                         continue
             WebDriverWait(driver, 10).until(ec.number_of_windows_to_be(len(run_all_elements)+1))  # ждем пока
             # откроются все окна с теорией
+            time.sleep(5)  # пока такое гавно
             while len(driver.window_handles) > 1:  # закрываем все открытые окна, кроме основного
                 driver.switch_to.window(driver.window_handles[1])
                 driver.close()
+                time.sleep(1)  # пока такое гавно
             wait_window_load_and_switch(0)
         else:
             exception_count += 1
@@ -470,8 +464,8 @@ def end_test_click(course_name, passing_score):
     wait_window_load_and_switch(0)
 
 
-# делаем ошибки смотря на проходной бал кроме ПРВТ. Везде где меньше 100% делаем одну ошибку, но чтобы было не менее 90%
-# в ПРВТ делаем 1-2 ошибки рандомно в 1м разделе
+# делаем ошибки смотря на проходной бал кроме ПРВТ. Везде где меньше 100% делаем 0-1 ошибку, но чтобы было не менее 90%
+# в ПРВТ делаем 2-4 ошибки рандомно в 1м разделе
 def make_wrong_answers(test_type, unknown_question_amount):  # если принимаемое значени = 1, то это ПРВТ иначе не ПРВТ
     weblist_array = get_weblist_array()
     if test_type:  # если тест ПВРТ делаем минимум 2 ошибки с 80% результат
@@ -481,6 +475,8 @@ def make_wrong_answers(test_type, unknown_question_amount):  # если прин
         passing_score = 90
         min_mistakes_count = 0
     max_mistakes_count = int(len(weblist_array[0][0]) - (passing_score / (100 / len(weblist_array[0][0]))))
+    min_mistakes_count = 2  # для тестирования
+    max_mistakes_count = 4  # для тестирования
     wrong_answers_count = random.randint(min_mistakes_count, max_mistakes_count) - unknown_question_amount  # считаем
     # рандомное количество ошибок которое нужно сделать в тесте за вычетом ненайденных ответов
     if wrong_answers_count <= 0:
@@ -490,7 +486,16 @@ def make_wrong_answers(test_type, unknown_question_amount):  # если прин
     wrong_answer_link_click = []  # лист с рандомно выбранными неправильными ответами
     wrong_question_id = []  # лист с ID неверно кликнутых вопросов
     wrong_answer_number_list = []  # лист с номерами вопросов на которые даны неверные ответы
+    wrong_question = []  # неправильные вопросы, которые прога кликнула
+    wrong_answer = []  # неправильные ответы, которые прога кликнула
+    # Симметрично рандомно мешаем элементы в массивах с checkbox, ID вопросов и ссылками на ответы
+    random_weblist = list(zip(weblist_array[4], weblist_array[3], weblist_array[2], weblist_array[1],
+                              weblist_array[0][0]))
+    random.shuffle(random_weblist)
+
+    weblist_array[4], weblist_array[3], weblist_array[2], weblist_array[1], weblist_array[0][0] = zip(*random_weblist)
     for num_answer, each_answer in enumerate(weblist_array[4]):
+        temp_wrong_answer = []
         if wrong_counter >= wrong_answers_count:
             break
         if sum(each_answer) > 1:  # если вопрос с несколькими вариантами ответов, то
@@ -500,6 +505,10 @@ def make_wrong_answers(test_type, unknown_question_amount):  # если прин
                     wrong_answer_link_click.append(weblist_array[2][num_answer][num])  # снимаем checkbox
                     wrong_question_id.append(weblist_array[3][num_answer])  # добавляем ID вопроса как неправильного
                     # c верного ответа
+                    if not weblist_array[0][0][num_answer] in wrong_question:  # добавляем название неверноклик. вопроса
+                        wrong_question.append(weblist_array[0][0][num_answer])
+                    if not weblist_array[1][num_answer][num] in wrong_answer:  # добавляем неверноклик. ответ
+                        temp_wrong_answer.append(weblist_array[1][num_answer][num] + '*убрал выбор*')
                     if not num_answer + 1 in wrong_answer_number_list:  # добавляем № невернокликнутого вопроса
                         wrong_answer_number_list.append(num_answer + 1)
                     break
@@ -508,11 +517,18 @@ def make_wrong_answers(test_type, unknown_question_amount):  # если прин
                     # ответов не превышает сумму верных, то добавляем в массив чтобы сделать неверные ответы
                     wrong_answer_link_click.append(weblist_array[2][num_answer][num])
                     wrong_question_id.append(weblist_array[3][num_answer])  # добавляем ID вопроса как неправильного
+                    if not weblist_array[0][0][num_answer] in wrong_question:  # добавляем название неверноклик. вопроса
+                        wrong_question.append(weblist_array[0][0][num_answer])
+                    if not weblist_array[1][num_answer][num] in wrong_answer:  # добавляем неверноклик. ответ
+                        temp_wrong_answer.append(weblist_array[1][num_answer][num] + '*выбрал*')
                     if not num_answer + 1 in wrong_answer_number_list:  # добавляем № невернокликнутого вопроса
                         wrong_answer_number_list.append(num_answer + 1)
                     break
+            wrong_answer.append(temp_wrong_answer)  # добавляем временный набор ответов, чтобы индекс вопроса в
+            #  wrong_question соответствовал индексу массива ответов
     if wrong_counter < wrong_answers_count:
         for num_answer, each_answer in enumerate(weblist_array[4]):
+            temp_wrong_answer = []
             if wrong_counter >= wrong_answers_count:
                 break
             for num, every in enumerate(each_answer):  # читаем каждый вариант ответа
@@ -521,6 +537,10 @@ def make_wrong_answers(test_type, unknown_question_amount):  # если прин
                     wrong_answer_link_click.append(weblist_array[2][num_answer][num])  # снимаем checkbox
                     # c верного ответа
                     wrong_question_id.append(weblist_array[3][num_answer])  # добавляем ID вопроса как неправильного
+                    if not weblist_array[0][0][num_answer] in wrong_question:  # добавляем название неверноклик. вопроса
+                        wrong_question.append(weblist_array[0][0][num_answer])
+                    if not weblist_array[1][num_answer][num] in wrong_answer:  # добавляем неверноклик. ответ
+                        temp_wrong_answer.append(weblist_array[1][num_answer][num] + '*убрал выбор*')
                     if not num_answer + 1 in wrong_answer_number_list:  # добавляем № невернокликнутого вопроса
                         wrong_answer_number_list.append(num_answer + 1)
                     break
@@ -529,10 +549,16 @@ def make_wrong_answers(test_type, unknown_question_amount):  # если прин
                     # и такого же елемента нет в листе то добавляем в массив чтобы сделать неверные ответы
                     wrong_answer_link_click.append(weblist_array[2][num_answer][num])
                     wrong_question_id.append(weblist_array[3][num_answer])  # добавляем ID вопроса как неправильного
+                    if not weblist_array[0][0][num_answer] in wrong_question:  # добавляем название неверноклик. вопроса
+                        wrong_question.append(weblist_array[0][0][num_answer])
+                    if not weblist_array[1][num_answer][num] in wrong_answer:  # добавляем неверноклик. ответ
+                        temp_wrong_answer.append(weblist_array[1][num_answer][num] + '*выбрал*')
                     if not num_answer + 1 in wrong_answer_number_list:  # добавляем № невернокликнутого вопроса
                         wrong_answer_number_list.append(num_answer + 1)
                     break
             wrong_counter += 1
+            wrong_answer.append(temp_wrong_answer)  # добавляем временный набор ответов, чтобы индекс вопроса в
+            #  wrong_question соответствовал индексу массива ответов
     for num, each in enumerate(wrong_answer_link_click):
         try:
             wait_element_load('//*//div//table//tbody//tr//td//div//span')
@@ -545,16 +571,6 @@ def make_wrong_answers(test_type, unknown_question_amount):  # если прин
             each.click()
         except Exception as ex:
             print('[INFO] Произошла проблема при прокликивании неверных вариантов ответа:\n {0}'.format(ex))
-    wrong_question = []  # неправильные вопросы, которые прога кликнула
-    wrong_answer = []  # неправильные ответы, которые прога кликнула
-    weblist_array = get_weblist_array()
-    for each_question in wrong_answer_number_list:
-        wrong_question.append(weblist_array[0][0][each_question-1])
-        temp_wrong_answer = []  # промежуточный массив ответов
-        for num_answer, each_answer in enumerate(weblist_array[4][each_question-1]):
-            if each_answer:
-                temp_wrong_answer.append(weblist_array[1][each_question-1][num_answer])
-        wrong_answer.append(temp_wrong_answer)
     course_log.append(wrong_question)
     course_log.append(wrong_answer)
     print('[INFO] Сделаны ошибки в вопросах №{0}'.format(wrong_answer_number_list))
@@ -641,14 +657,22 @@ def start_script():
                 print('[ERR] {0} Не могу кликнуть кнопку смены часового пояса, пробую снова'.format(ex))
                 time.sleep(1)
                 continue
-    try:
-        driver.get(_find_courses_link)  # Поиск курсов для сдачи
-        driver.get(_find_courses_link)  # Поиск курсов для сдачи
-        courses_url, courses_list_text, passing_score_list = find_courses()  # Найти курсы
-    except Exception as ex:
-        print('[ERR] {0} Не могу найти URL и названия назначенных тем'.format(ex))
-        playsound(music_path)
-        sys.exit()
+    courses_url = 0
+    courses_list_text = 0
+    passing_score_list = 100
+    for i in range(0, 10):  # делаем 10 попыток найти курсы, если не получается, выходим из проги
+        try:
+            driver.get(_find_courses_link)  # Поиск курсов для сдачи
+            driver.get(_find_courses_link)  # Поиск курсов для сдачи
+            courses_url, courses_list_text, passing_score_list = find_courses()  # Найти курсы
+            break
+        except Exception as ex:
+            print('[ERR] {0} Не могу найти URL и названия назначенных тем'.format(ex))
+            time.sleep(1)
+            if i == 9:
+                playsound(music_path)
+                return
+            continue
     if not courses_url:
         print('Нет назначенных курсов')
         sys.exit()
