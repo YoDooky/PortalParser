@@ -475,8 +475,6 @@ def make_wrong_answers(test_type, unknown_question_amount):  # если прин
         passing_score = 90
         min_mistakes_count = 0
     max_mistakes_count = int(len(weblist_array[0][0]) - (passing_score / (100 / len(weblist_array[0][0]))))
-    min_mistakes_count = 2  # для тестирования
-    max_mistakes_count = 4  # для тестирования
     wrong_answers_count = random.randint(min_mistakes_count, max_mistakes_count) - unknown_question_amount  # считаем
     # рандомное количество ошибок которое нужно сделать в тесте за вычетом ненайденных ответов
     if wrong_answers_count <= 0:
@@ -485,14 +483,12 @@ def make_wrong_answers(test_type, unknown_question_amount):  # если прин
     wrong_counter = 0  # количество уже сделанных ошибок
     wrong_answer_link_click = []  # лист с рандомно выбранными неправильными ответами
     wrong_question_id = []  # лист с ID неверно кликнутых вопросов
-    wrong_answer_number_list = []  # лист с номерами вопросов на которые даны неверные ответы
     wrong_question = []  # неправильные вопросы, которые прога кликнула
     wrong_answer = []  # неправильные ответы, которые прога кликнула
     # Симметрично рандомно мешаем элементы в массивах с checkbox, ID вопросов и ссылками на ответы
     random_weblist = list(zip(weblist_array[4], weblist_array[3], weblist_array[2], weblist_array[1],
                               weblist_array[0][0]))
     random.shuffle(random_weblist)
-
     weblist_array[4], weblist_array[3], weblist_array[2], weblist_array[1], weblist_array[0][0] = zip(*random_weblist)
     for num_answer, each_answer in enumerate(weblist_array[4]):
         temp_wrong_answer = []
@@ -509,8 +505,6 @@ def make_wrong_answers(test_type, unknown_question_amount):  # если прин
                         wrong_question.append(weblist_array[0][0][num_answer])
                     if not weblist_array[1][num_answer][num] in wrong_answer:  # добавляем неверноклик. ответ
                         temp_wrong_answer.append(weblist_array[1][num_answer][num] + '*убрал выбор*')
-                    if not num_answer + 1 in wrong_answer_number_list:  # добавляем № невернокликнутого вопроса
-                        wrong_answer_number_list.append(num_answer + 1)
                     break
             for num, every in enumerate(each_answer):  # читаем каждый вариант ответа
                 if not every:  # если не был выбран ответ и сумма неверных
@@ -521,8 +515,6 @@ def make_wrong_answers(test_type, unknown_question_amount):  # если прин
                         wrong_question.append(weblist_array[0][0][num_answer])
                     if not weblist_array[1][num_answer][num] in wrong_answer:  # добавляем неверноклик. ответ
                         temp_wrong_answer.append(weblist_array[1][num_answer][num] + '*выбрал*')
-                    if not num_answer + 1 in wrong_answer_number_list:  # добавляем № невернокликнутого вопроса
-                        wrong_answer_number_list.append(num_answer + 1)
                     break
             wrong_answer.append(temp_wrong_answer)  # добавляем временный набор ответов, чтобы индекс вопроса в
             #  wrong_question соответствовал индексу массива ответов
@@ -541,8 +533,6 @@ def make_wrong_answers(test_type, unknown_question_amount):  # если прин
                         wrong_question.append(weblist_array[0][0][num_answer])
                     if not weblist_array[1][num_answer][num] in wrong_answer:  # добавляем неверноклик. ответ
                         temp_wrong_answer.append(weblist_array[1][num_answer][num] + '*убрал выбор*')
-                    if not num_answer + 1 in wrong_answer_number_list:  # добавляем № невернокликнутого вопроса
-                        wrong_answer_number_list.append(num_answer + 1)
                     break
             for num, every in enumerate(each_answer):  # читаем каждый вариант ответа
                 if not every and not weblist_array[2][num_answer][num] in wrong_answer_link_click:  # если не был выбран
@@ -553,8 +543,6 @@ def make_wrong_answers(test_type, unknown_question_amount):  # если прин
                         wrong_question.append(weblist_array[0][0][num_answer])
                     if not weblist_array[1][num_answer][num] in wrong_answer:  # добавляем неверноклик. ответ
                         temp_wrong_answer.append(weblist_array[1][num_answer][num] + '*выбрал*')
-                    if not num_answer + 1 in wrong_answer_number_list:  # добавляем № невернокликнутого вопроса
-                        wrong_answer_number_list.append(num_answer + 1)
                     break
             wrong_counter += 1
             wrong_answer.append(temp_wrong_answer)  # добавляем временный набор ответов, чтобы индекс вопроса в
@@ -573,7 +561,7 @@ def make_wrong_answers(test_type, unknown_question_amount):  # если прин
             print('[INFO] Произошла проблема при прокликивании неверных вариантов ответа:\n {0}'.format(ex))
     course_log.append(wrong_question)
     course_log.append(wrong_answer)
-    print('[INFO] Сделаны ошибки в вопросах №{0}'.format(wrong_answer_number_list))
+    print('[INFO] Сделаны ошибки в {0} вопросах {1}'.format(wrong_answers_count, wrong_question))
 
 
 # функция для нахождения проходного бала
