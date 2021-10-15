@@ -295,7 +295,7 @@ def run_tests_on_page(course_url, course_name, test_number):
                         continue
                 wait_window_load_and_switch(1)
             else:  # если это ПРВТ
-                for i in range(10):  # делаем 10 попыток кликнуть
+                for i in range(10):  # делаем 10 попыток кликнуть по кнопке запуска тестирования
                     try:
                         wait_window_load_and_switch(0)
                         driver.find_elements(By.XPATH, each_button)[-1].click()  # кликаем по кнопке начала
@@ -306,9 +306,11 @@ def run_tests_on_page(course_url, course_name, test_number):
                         time.sleep(1)
                         continue
                 wait_window_load_and_switch(1)
-                if wait_element_load('//*[@id="btnOk"]'):  # проверяем вылезло ли окно с подтверждением начать тест
+                #if wait_element_load(button_ok):  # проверяем вылезло ли окно с подтверждением начать тест
                     # и соглашаемся
-                    for i in range(10):  # делаем 10 попыток кликнуть
+                if each_button == run_test_button_mask[1]:  # если это первой нажатие по кнопке начала сдачи, то
+                    # делаем несколько попыток кликнуть ОК
+                    for i in range(10):  # делаем 10 попыток кликнуть по кнопке подтверждения списания попыток
                         try:
                             wait_element_load(button_ok)
                             driver.find_element(By.XPATH, button_ok).click()
@@ -396,7 +398,7 @@ def end_test_click(course_name, passing_score):
         section_amount = int(re.findall(r'\d+', section_text)[1]) - int(re.findall(r'\d+', section_text)[0]) + 1  #
         # выясняем количество  оставшихся разделов по фильтру
         for each in range(section_amount):
-            time.sleep(10)  # пока вот такое гавно
+            time.sleep(20)  # пока вот такое гавно
             wait_window_load_and_switch(1)
             wait_element_load(frame_mask)
             driver.switch_to.frame(driver.find_element(By.XPATH, frame_mask))
@@ -404,14 +406,13 @@ def end_test_click(course_name, passing_score):
             if each == 0 and wait_element_load(first_section_mask) and passing_score <= 90:  # делаем ошибки только если
                 # проходной балл < 90% и 1й раздел ПРВТ
                 make_wrong_answers(1, unknown_question_amount)
-            # wait_for_user(*** Доверяешь ли ты проге? Нажми Enter чтобы продолжить, "x" для выхода ***')
             time.sleep(5)  # пока вот такое гавно
             # Считаем количество символов во всех вопросах и делаем соответствующую задержку
             weblist_array = get_weblist_array()
             questions_symbols_count = 0
             for every in weblist_array[0][0]:  # считаем общее количество символов во всех вопросах
                 questions_symbols_count += len(every)
-            random_delay_timer(questions_symbols_count)  # в зависимости от количества символово делаем соотв. задержку
+            random_delay_timer(questions_symbols_count)  # в зависимости от количества символов делаем соотв. задержку
             for i in range(10):  # делаем 10 попыток кликнуть на кнопку Ответить
                 try:
                     driver.find_element(By.XPATH, answer_button_mask).click()
