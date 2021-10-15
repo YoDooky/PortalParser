@@ -5,9 +5,9 @@ block_cipher = None
 
 
 a = Analysis(['prometei.py'],
-             pathex=['C:\\PyProject\\HiProf'],
+             pathex=['C:\\Python\\HiProfAuto'],
              binaries=[('C:\\Prometei\\chromedriver.exe', '.')],
-             datas=[('heyuser.wav', '.')],
+             datas=[('C:\\Prometei\\heyuser.mp3', '.')],
              hiddenimports=[],
              hookspath=[],
              hooksconfig={},

@@ -22,6 +22,7 @@ username = "79833207865"#"Mikhailov_DA"#"89120067386"  # "79140020797"#  Имя 
 password = "0Jh#8GPT"#"Bb-pGE58"#"&RcXu*WD"  # "%@hrDv3Q"## Пароль юзера (впоследствии получаемый через бота)&RcXu*WD
 general_log = []  # итоговый лог
 course_log = []  # лог по окончании теста. 1 - неизвестные вопросы, 2 - неверные вопросы, 3 - неверные ответы
+driver_timeout = 20
 d = DesiredCapabilities.CHROME
 d['goog:loggingPrefs'] = {'performance': 'ALL'}
 files_path = "C:/Prometei/"  # путь к папке со всеми файлами (драйвер хрома, база данных и т.п.)
@@ -31,12 +32,12 @@ options.add_argument('--log-level=3')
 driver = webdriver.Chrome(
     files_path + "chromedriver.exe", options=options)  # Это нужно чтобы можно было выгружать логи с браузера
 # (первоначально для Promitei)
-# _find_courses_link = "https://hiprof.irkutskoil.ru/mira/#&step=6&measureStageStatus=NOT_FINISHED&s=" \
-#                      "Q3dQ3j2436tctmcfnJys&doaction=MyMeasureStatisticsAllPeriodNotFinished&id=&type=" \
-#                      "mymeasurestatisticslist&measurePeriod=ALL_PERIOD"
-_find_courses_link = 'https://hiprof.irkutskoil.ru/mira/#&stype=sb&sb=1&step=8&id=0&type=mymeasurestatisticslist&' \
-                       'name=%D0%A1%D1%82%D0%B0%D1%82%D0%B8%D1%81%D1%82%D0%B8%D0%BA%D0%B0+' \
-                     '%D0%BC%D0%BE%D0%B5%D0%B3%D0%BE+%D0%BE%D0%B1%D1%83%D1%87%D0%B5%D0%BD%D0%B8%D1%8F'  # тестовая ссы
+_find_courses_link = "https://hiprof.irkutskoil.ru/mira/#&step=6&measureStageStatus=NOT_FINISHED&s=" \
+                     "Q3dQ3j2436tctmcfnJys&doaction=MyMeasureStatisticsAllPeriodNotFinished&id=&type=" \
+                     "mymeasurestatisticslist&measurePeriod=ALL_PERIOD"
+# _find_courses_link = 'https://hiprof.irkutskoil.ru/mira/#&stype=sb&sb=1&step=8&id=0&type=mymeasurestatisticslist&' \
+#                        'name=%D0%A1%D1%82%D0%B0%D1%82%D0%B8%D1%81%D1%82%D0%B8%D0%BA%D0%B0+' \
+#                      '%D0%BC%D0%BE%D0%B5%D0%B3%D0%BE+%D0%BE%D0%B1%D1%83%D1%87%D0%B5%D0%BD%D0%B8%D1%8F'  # тестовая ссы
 _auth_link = "https://hiprof.irkutskoil.ru/mira/Do?doaction=Go&s=YwSqVdexvj7jQdJp9sEs&id=0&type=customloginpage"
 driver.maximize_window()
 
@@ -160,30 +161,35 @@ def get_weblist_array():
 def find_courses():
     courses_list_mask = '//*[@class="mira-grid-cell-action"]'
     courses_path_mask = '//*[@class="mira-grid-cell-operation border-box  primary  "]'
-    wait_window_load_and_switch(0)
     courses_list_text = []
     courses_url = []
     passing_score_list = []
+    driver.get(_find_courses_link)  # Поиск курсов для сдачи
+    driver.get(_find_courses_link)  # Поиск курсов для сдачи
+    driver.implicitly_wait(driver_timeout)
+    wait_window_load_and_switch(0)
     try:
         wait_element_load(courses_list_mask)
         wait_element_load(courses_path_mask)
+        time.sleep(10)
         courses_list = driver.find_elements(By.XPATH, courses_list_mask)
         courses_path = driver.find_elements(By.XPATH, courses_path_mask)
     except Exception as ex:
-        print('[INFO] Не удалось найти назначенные курсы и перейти к ним. Описатель ошибки: \n {0}'.format(ex))
-        sys.exit(0)
+        print('[INFO] {0} Не удалось найти назначенные курсы и перейти к ним.'.format(ex))
+        sys.exit()
     amount_of_course = len(courses_path)
     for each_list in courses_list:
-        courses_list_text.append(each_list.text)
+        courses_list_text.append(each_list.get_attribute('innerText'))
     for each_path in range(amount_of_course):
         driver.get(_find_courses_link)  # Поиск курсов для сдачи
         driver.get(_find_courses_link)  # Поиск курсов для сдачи
-        driver.implicitly_wait(10)
+        driver.implicitly_wait(driver_timeout)
         time.sleep(2)
-        WebDriverWait(driver, 10).until(ec.visibility_of(driver.find_elements(
+        wait_element_load(courses_path_mask)
+        WebDriverWait(driver, driver_timeout).until(ec.visibility_of(driver.find_elements(
             By.XPATH, courses_path_mask)[each_path]))
         driver.find_elements(By.XPATH, courses_path_mask)[each_path].click()
-        driver.implicitly_wait(10)  # ждем пока загрузится новая страница
+        driver.implicitly_wait(driver_timeout)  # ждем пока загрузится новая страница
         try:  # попробуем найти проходной балл для теста
             passing_score_list.append(check_passing_score())
         except Exception as ex:
@@ -221,8 +227,8 @@ def run_theory_on_page(course_url, course_name):
                         print('[ERR] {0} Не получилось кликнуть по кнопкам прочтения теории, пробую снова'.format(ex))
                         time.sleep(1)
                         continue
-            WebDriverWait(driver, 10).until(ec.number_of_windows_to_be(len(run_all_elements)+1))  # ждем пока
-            # откроются все окна с теорией
+            WebDriverWait(driver, driver_timeout).until(ec.number_of_windows_to_be(len(run_all_elements) + 1))  # ждем
+            # пока откроются все окна с теорией
             time.sleep(5)  # пока такое гавно
             while len(driver.window_handles) > 1:  # закрываем все открытые окна, кроме основного
                 driver.switch_to.window(driver.window_handles[1])
@@ -341,7 +347,8 @@ def right_answer_click():  # собираем массив с ссылками �
             question_select = driver.find_element(By.XPATH, founded_questions_mask)
             driver.execute_script("arguments[0].scrollIntoView();", question_select)  # прокрутка
             # чтобы можно было кликнуть
-            WebDriverWait(driver, 10).until(ec.visibility_of(each))  # ждем чтобы элемент был виден и кликаем по нему
+            WebDriverWait(driver, driver_timeout).until(ec.visibility_of(each))  # ждем чтобы элемент был виден и
+            # кликаем по нему
             each.click()
         except Exception as ex:
             print('[INFO] {0} Произошла проблема при прокликивании вариантов ответа'.format(ex))
@@ -555,7 +562,8 @@ def make_wrong_answers(test_type, unknown_question_amount):  # если прин
             question_select = driver.find_element(By.XPATH, wrong_questions_mask)
             driver.execute_script("arguments[0].scrollIntoView();", question_select)  # прокрутка
             # чтобы можно было кликнуть
-            WebDriverWait(driver, 10).until(ec.visibility_of(each))  # ждем чтобы элемент был виден и кликаем по нему
+            WebDriverWait(driver, driver_timeout).until(ec.visibility_of(each))  # ждем чтобы элемент был виден и
+            # кликаем по нему
             each.click()
         except Exception as ex:
             print('[INFO] Произошла проблема при прокликивании неверных вариантов ответа:\n {0}'.format(ex))
@@ -633,7 +641,7 @@ def start_script():
                 driver.find_elements(By.XPATH, working_place_button_mask)[-1].click()
                 break
             except Exception as ex:
-                print('[ERR] {0} Не могу кликнуть кнопку смены рабочего места, пробую снова'.format(ex))
+                #print('[ERR] {0} Не могу кликнуть кнопку смены рабочего места, пробую снова'.format(ex))
                 time.sleep(1)
                 continue
     if wait_element_load(change_timezone_button_mask):  # смотрим есть ли кнопка отмены смены часового пояса и отменяем
@@ -645,22 +653,7 @@ def start_script():
                 print('[ERR] {0} Не могу кликнуть кнопку смены часового пояса, пробую снова'.format(ex))
                 time.sleep(1)
                 continue
-    courses_url = 0
-    courses_list_text = 0
-    passing_score_list = 100
-    for i in range(0, 10):  # делаем 10 попыток найти курсы, если не получается, выходим из проги
-        try:
-            driver.get(_find_courses_link)  # Поиск курсов для сдачи
-            driver.get(_find_courses_link)  # Поиск курсов для сдачи
-            courses_url, courses_list_text, passing_score_list = find_courses()  # Найти курсы
-            break
-        except Exception as ex:
-            print('[ERR] {0} Не могу найти URL и названия назначенных тем'.format(ex))
-            time.sleep(1)
-            if i == 9:
-                playsound(music_path)
-                return
-            continue
+    courses_url, courses_list_text, passing_score_list = find_courses()  # Найти курсы
     if not courses_url:
         print('Нет назначенных курсов')
         sys.exit()
