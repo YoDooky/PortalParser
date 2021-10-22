@@ -13,10 +13,10 @@ from selenium.webdriver.support import expected_conditions as ec
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.chrome.options import Options
 from selenium.common.exceptions import UnexpectedAlertPresentException
-from selenium.common.exceptions import StaleElementReferenceException
+#from selenium.common.exceptions import StaleElementReferenceException
 from selenium.common.exceptions import TimeoutException
-from selenium.common.exceptions import NoSuchWindowException
-from selenium.common.exceptions import NoSuchElementException
+#from selenium.common.exceptions import NoSuchWindowException
+#from selenium.common.exceptions import NoSuchElementException
 
 username = "79833207865"#"Mikhailov_DA"#"89120067386"  # "79140020797"#  Имя юзера (впоследствии получаемое через бота)
 password = "0Jh#8GPT"#"Bb-pGE58"#"&RcXu*WD"  # "%@hrDv3Q"## Пароль юзера (впоследствии получаемый через бота)&RcXu*WD
@@ -26,7 +26,7 @@ driver_timeout = 20
 d = DesiredCapabilities.CHROME
 d['goog:loggingPrefs'] = {'performance': 'ALL'}
 files_path = "C:/Prometei/"  # путь к папке со всеми файлами (драйвер хрома, база данных и т.п.)
-music_path = 'heyuser.mp3'
+music_path = "C:/Prometei/heyuser.mp3"
 options = Options()
 options.add_argument('--log-level=3')
 driver = webdriver.Chrome(
@@ -280,9 +280,11 @@ def run_tests_on_page(course_url, course_name, test_number):
     driver.get(course_url)  # Сука тупорылый сайт не переходит по url с первого раза
     wait_window_load_and_switch(0)
     no_test_button_counter = 0  # Счетчик не найденных кнопок с запуском теста
+    test_type = 0  # тип теста (1 - ПРВТ, 2 - неПРВТ)
     for each_button in run_test_button_mask:
         if wait_element_load(each_button):
             if each_button == run_test_button_mask[0]:  # если это не ПРВТ
+                test_type = 2
                 for i in range(10):  # делаем 10 попыток кликнуть
                     try:
                         wait_window_load_and_switch(0)
@@ -294,7 +296,35 @@ def run_tests_on_page(course_url, course_name, test_number):
                         time.sleep(1)
                         continue
                 wait_window_load_and_switch(1)
-            else:  # если это ПРВТ
+                break
+            elif each_button == run_test_button_mask[1]:  # если это ПРВТ и первое нажатие по кнопке начала сдачи, то
+                # делаем несколько попыток кликнуть ОК
+                test_type = 1
+                for i in range(10):  # делаем 10 попыток кликнуть по кнопке запуска тестирования
+                    try:
+                        wait_window_load_and_switch(0)
+                        driver.find_elements(By.XPATH, each_button)[-1].click()  # кликаем по кнопке начала
+                        # тестирования
+                        break
+                    except Exception as ex:
+                        print('[ERR] {0} Не получилось кликнуть по кнопке запуска теста, пробую снова'.format(ex))
+                        time.sleep(1)
+                        continue
+                for i in range(10):  # делаем 10 попыток кликнуть по кнопке подтверждения списания попыток
+                    try:
+                        wait_window_load_and_switch(1)
+                        #wait_element_load(button_ok, 1)
+                        driver.find_element(By.XPATH, button_ok).click()
+                        break
+                    except Exception as ex:
+                        print('[ERR] <{0}> Не смог кликнуть кнопку подтверждения списания попытки, пробую снова'.
+                              format(ex))
+                        time.sleep(1)
+                        continue
+                wait_window_load_and_switch(1)
+                break
+            elif each_button == run_test_button_mask[2]:  # если это ПРВТ и попытка продолжается
+                test_type = 1
                 for i in range(10):  # делаем 10 попыток кликнуть по кнопке запуска тестирования
                     try:
                         wait_window_load_and_switch(0)
@@ -306,29 +336,16 @@ def run_tests_on_page(course_url, course_name, test_number):
                         time.sleep(1)
                         continue
                 wait_window_load_and_switch(1)
-                #if wait_element_load(button_ok):  # проверяем вылезло ли окно с подтверждением начать тест
-                    # и соглашаемся
-                if each_button == run_test_button_mask[1]:  # если это первой нажатие по кнопке начала сдачи, то
-                    # делаем несколько попыток кликнуть ОК
-                    for i in range(10):  # делаем 10 попыток кликнуть по кнопке подтверждения списания попыток
-                        try:
-                            wait_element_load(button_ok)
-                            driver.find_element(By.XPATH, button_ok).click()
-                            break
-                        except Exception as ex:
-                            print('[ERR] <{0}> Не смог кликнуть кнопку подтверждения списания попытки, пробую снова'.
-                                  format(ex))
-                            time.sleep(1)
-                            continue
-                return 1
+                break
+            return test_type
         else:
             no_test_button_counter += 1
         if no_test_button_counter == len(run_test_button_mask):  # если нет кнопок с запуском тогда off
             print('[INFO] <{0}> Не нашел кнопок запуска тестирования №{1}'.format(course_name, test_number + 1))
             general_log.append('[INFO] <{0}> Не нашел кнопок запуска тестирования №{1}'.
                                format(course_name, test_number + 1))
-            return 0
-    return 1
+            return test_type
+    return test_type
 
 
 # кликаем по правильным ответам в тесте
@@ -376,7 +393,7 @@ def right_answer_click():  # собираем массив с ссылками �
 
 
 # ищем и кликаем по кнопке "Ответить" и ищем следуйщий раздел и переходим на него
-def end_test_click(course_name, passing_score):
+def end_test_click(course_name, passing_score, test_type):
     answer_button_mask = '//*[@class[contains(.,"ui-button ui-corner-all quiz_components_button_button destroyable ' \
                          'check_button quiz_models_components_button_check_button")]]'  # кнопка Ответить
     endtest_button_mask = '//*[@class[contains(.,"ui-button ui-corner-all quiz_components_button_button destroyable ' \
@@ -392,7 +409,7 @@ def end_test_click(course_name, passing_score):
     # весь контент в айфрейм, поэтому переключаемся на него сделай еще проверку на отрытие окна с
     # подтверждением сдачи и нажатием там кнопки ОК
     wait_element_load(answer_button_mask)
-    try:  # пытаемся узнать сколько разделов в тесте
+    if test_type == 1:  # пытаемся узнать сколько разделов в тесте
         wait_element_load(section_mask)
         section_text = str(driver.find_element(By.XPATH, section_mask).text)
         section_amount = int(re.findall(r'\d+', section_text)[1]) - int(re.findall(r'\d+', section_text)[0]) + 1  #
@@ -421,7 +438,7 @@ def end_test_click(course_name, passing_score):
                     print('[ERR] <{0}> Не смог кликнуть кнопку Ответить, пробую снова'.format(ex))
                     time.sleep(1)
                     continue
-    except NoSuchElementException:
+    elif test_type == 2:
         print('[INFO] <{0}> В данном тесте только один раздел'.format(course_name))
         general_log.append('[INFO] <{0}> В данном тесте только один раздел'.format(course_name))
         wait_window_load_and_switch(1)
@@ -672,18 +689,19 @@ def start_script():
         amount_of_tests = find_amount_of_tests_on_page(courses_url[each_selected-1], courses_list_text[each_selected-1])
         run_theory_on_page(courses_url[each_selected - 1], courses_list_text[each_selected - 1])  # прокликиваем теорию
         for each_test in range(0, amount_of_tests):  # проходимся по всем тестам в курсе (матрёшка бля)
-            try:
-                if run_tests_on_page(courses_url[each_selected-1], courses_list_text[each_selected-1], each_test):
-                    course_log.clear()  # обнуляем массив с логом от предъидущего курса
-                    end_test_click(courses_list_text[each_selected-1], passing_score_list[each_selected-1])
-            except StaleElementReferenceException:
-                print("[ERR] <{0}> Не везде кликнул".format(courses_list_text[each_selected-1]))
-                general_log.append("[ERR] <{0}> Не везде кликнул".format(courses_list_text[each_selected-1]))
-            except NoSuchWindowException:
-                print('[INFO] <{0}> Не удалось перейти на страницу со всеми тестами'.
-                      format(courses_list_text[each_selected-1]))
-                general_log.append('[INFO] <{0}> Не удалось перейти на страницу со всеми тестами'.
-                                   format(courses_list_text[each_selected-1]))
+            # try:
+            test_type = run_tests_on_page(courses_url[each_selected-1], courses_list_text[each_selected-1], each_test)
+            if test_type:
+                course_log.clear()  # обнуляем массив с логом от предъидущего курса
+                end_test_click(courses_list_text[each_selected-1], passing_score_list[each_selected-1], test_type)
+            # except StaleElementReferenceException:
+            #     print("[ERR] <{0}> Не везде кликнул".format(courses_list_text[each_selected-1]))
+            #     general_log.append("[ERR] <{0}> Не везде кликнул".format(courses_list_text[each_selected-1]))
+            # except NoSuchWindowException:
+            #     print('[INFO] <{0}> Не удалось перейти на страницу со всеми тестами'.
+            #           format(courses_list_text[each_selected-1]))
+            #     general_log.append('[INFO] <{0}> Не удалось перейти на страницу со всеми тестами'.
+            #                        format(courses_list_text[each_selected-1]))
     print('************************************')
     print('В общем чо по итогу кожаный ублюдок:')
     print(*general_log, sep='\n')
